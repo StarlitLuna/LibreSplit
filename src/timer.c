@@ -1137,7 +1137,7 @@ int ls_timer_start(ls_timer* timer)
 int ls_timer_split(ls_timer* timer)
 {
     LOG_DEBUG("Splitting...");
-    if (ls_time_lte_zero(ls_timer_get_time(timer, true))) {
+    if (!is_time_valid(ls_time_get_by_method(ls_timer_get_time(timer, true), timer->game->comparison_method))) {
         return 0;
     }
 
