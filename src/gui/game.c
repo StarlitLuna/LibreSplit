@@ -118,7 +118,7 @@ static ls_game* create_snapshot(const ls_game* game)
         if (game->split_titles[i]) {
             snapshot->split_titles[i] = strdup(game->split_titles[i]);
             if (!snapshot->split_titles[i]) {
-                LOG_ERRF("snapshot creation: unable to duplicate `split_titles[%zu]` in memory", i);
+                LOG_ERRF("snapshot creation: unable to duplicate `split_titles[%u]` in memory", i);
                 goto snapshot_failed;
             }
         }
@@ -126,7 +126,7 @@ static ls_game* create_snapshot(const ls_game* game)
         if (game->split_icon_paths[i]) {
             snapshot->split_icon_paths[i] = strdup(game->split_icon_paths[i]);
             if (!snapshot->split_icon_paths[i]) {
-                LOG_ERRF("snapshot creation: unable to duplicate `split_icon_paths[%zu]` in memory", i);
+                LOG_ERRF("snapshot creation: unable to duplicate `split_icon_paths[%u]` in memory", i);
                 goto snapshot_failed;
             }
         }

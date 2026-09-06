@@ -135,7 +135,7 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
     }
 
     if (icon->type >= LS_DIALOG_ICON_INVALID) {
-        LOG_ERRF("Invalid icon type supplied: %zu", icon->type);
+        LOG_ERRF("Invalid icon type supplied: %u", icon->type);
         return FALSE;
     }
 
