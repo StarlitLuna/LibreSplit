@@ -134,8 +134,8 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
         return TRUE;
     }
 
-    if (icon->type < 0 || icon->type >= LS_DIALOG_ICON_INVALID) {
-        LOG_ERRF("Invalid icon type supplied: %d", icon->type);
+    if (icon->type >= LS_DIALOG_ICON_INVALID) {
+        LOG_ERRF("Invalid icon type supplied: %zu", icon->type);
         return FALSE;
     }
 
@@ -750,7 +750,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
-    if (filters_count < 0 || filters_count > FILE_PICKER_MAX_FILTERS) {
+    if (filters_count > FILE_PICKER_MAX_FILTERS) {
         LOG_ERR("Invalid ls_file_picker_open usage: number of filters out of bounds");
         return FALSE;
     }
