@@ -278,8 +278,8 @@ static void ls_time_string_format(char* string,
     minutes = (time / (1000000LL * 60)) % 60;
     seconds = (time / 1000000LL) % 60;
     sprintf(dot_subsecs, ".%06lld", time % 1000000LL);
-    int display_decimals = cfg.libresplit.decimals.value.i;
     if (!serialized) {
+        int display_decimals = cfg.libresplit.decimals.value.i;
         int subsec_idx = 0;
         if (display_decimals <= 0) {
             subsec_idx = 0;
