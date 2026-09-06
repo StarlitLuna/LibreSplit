@@ -765,7 +765,7 @@ static bool ls_write_save(json_t* json, const char* path)
         int error = errno;
         if (error != ENOENT) {
             LOG_ERRF("save game: unable to inspect path '%s': %s", path, g_strerror(error));
-            goto save_failed;
+            goto ls_write_save_failed;
         }
 
         // file doesn't exist so it cannot be a symlink
@@ -773,31 +773,31 @@ static bool ls_write_save(json_t* json, const char* path)
         real_path = strdup(path);
         if (real_path == NULL) {
             LOG_ERR("save game: failed to duplicate path string");
-            goto save_failed;
+            goto ls_write_save_failed;
         }
     } else {
         // resolve symlinks
         real_path = realpath(path, NULL);
         if (real_path == NULL) {
             LOG_ERRF("save game: failed to resolve path '%s': %s", path, g_strerror(errno));
-            goto save_failed;
+            goto ls_write_save_failed;
         }
 
         if (access(real_path, W_OK) != 0) {
             LOG_ERRF("save game: file is not writable '%s': %s", real_path, g_strerror(errno));
-            goto save_failed;
+            goto ls_write_save_failed;
         }
 
         GStatBuf file_info;
         if (g_stat(real_path, &file_info) != 0) {
             LOG_ERRF("save game: unable to inspect file '%s': %s", real_path, g_strerror(errno));
-            goto save_failed;
+            goto ls_write_save_failed;
         }
 
         // reject irregular files or hard links
         if (!S_ISREG(file_info.st_mode) || file_info.st_nlink > 1) {
             LOG_ERRF("save game: irregular file at '%s'", real_path);
-            goto save_failed;
+            goto ls_write_save_failed;
         }
     }
 
@@ -805,12 +805,12 @@ static bool ls_write_save(json_t* json, const char* path)
     if (!g_file_set_contents_full(real_path, contents, -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0666, &error)) {
         LOG_ERRF("save game: failed to write splits to '%s': %s", path, error->message);
         g_clear_error(&error);
-        goto save_failed;
+        goto ls_write_save_failed;
     }
 
     result = true;
 
-save_failed:
+ls_write_save_failed:
     free(real_path);
     free(contents);
     return result;

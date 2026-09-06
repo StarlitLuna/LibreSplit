@@ -44,7 +44,7 @@ static ls_game* create_snapshot(const ls_game* game)
         snapshot->title = strdup(game->title);
         if (!snapshot->title) {
             LOG_ERR("snapshot creation: unable to duplicate `title` in memory");
-            goto snapshot_failed;
+            goto create_snapshot_failed;
         }
     }
 
@@ -52,7 +52,7 @@ static ls_game* create_snapshot(const ls_game* game)
         snapshot->theme = strdup(game->theme);
         if (!snapshot->theme) {
             LOG_ERR("snapshot creation: unable to duplicate `theme` in memory");
-            goto snapshot_failed;
+            goto create_snapshot_failed;
         }
     }
 
@@ -60,7 +60,7 @@ static ls_game* create_snapshot(const ls_game* game)
         snapshot->theme_variant = strdup(game->theme_variant);
         if (!snapshot->theme_variant) {
             LOG_ERR("snapshot creation: unable to duplicate `theme_variant` in memory");
-            goto snapshot_failed;
+            goto create_snapshot_failed;
         }
     }
 
@@ -70,43 +70,43 @@ static ls_game* create_snapshot(const ls_game* game)
 
     if (!game->split_titles || !game->split_icon_paths || !game->split_times || !game->segment_times || !game->best_splits || !game->best_segments) {
         LOG_ERR("snapshot creation: positive split_count with empty split array(s)");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->split_titles = calloc(game->split_count, sizeof(char*));
     if (!snapshot->split_titles) {
         LOG_ERR("snapshot creation: unable to allocate memory for `split_titles`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->split_icon_paths = calloc(game->split_count, sizeof(char*));
     if (!snapshot->split_icon_paths) {
         LOG_ERR("snapshot creation: unable to allocate memory for `split_icon_paths`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->split_times = calloc(game->split_count, sizeof(ls_time));
     if (!snapshot->split_times) {
         LOG_ERR("snapshot creation: unable to allocate memory for `split_times`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->segment_times = calloc(game->split_count, sizeof(ls_time));
     if (!snapshot->segment_times) {
         LOG_ERR("snapshot creation: unable to allocate memory for `segment_times`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->best_splits = calloc(game->split_count, sizeof(ls_time));
     if (!snapshot->best_splits) {
         LOG_ERR("snapshot creation: unable to allocate memory for `best_splits`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     snapshot->best_segments = calloc(game->split_count, sizeof(ls_time));
     if (!snapshot->best_segments) {
         LOG_ERR("snapshot creation: unable to allocate memory for `best_segments`");
-        goto snapshot_failed;
+        goto create_snapshot_failed;
     }
 
     memcpy(snapshot->split_times, game->split_times, game->split_count * sizeof(ls_time));
@@ -119,7 +119,7 @@ static ls_game* create_snapshot(const ls_game* game)
             snapshot->split_titles[i] = strdup(game->split_titles[i]);
             if (!snapshot->split_titles[i]) {
                 LOG_ERRF("snapshot creation: unable to duplicate `split_titles[%u]` in memory", i);
-                goto snapshot_failed;
+                goto create_snapshot_failed;
             }
         }
 
@@ -127,14 +127,14 @@ static ls_game* create_snapshot(const ls_game* game)
             snapshot->split_icon_paths[i] = strdup(game->split_icon_paths[i]);
             if (!snapshot->split_icon_paths[i]) {
                 LOG_ERRF("snapshot creation: unable to duplicate `split_icon_paths[%u]` in memory", i);
-                goto snapshot_failed;
+                goto create_snapshot_failed;
             }
         }
     }
 
     return snapshot;
 
-snapshot_failed:
+create_snapshot_failed:
     ls_game_release(snapshot);
     return NULL;
 }
