@@ -229,11 +229,13 @@ static gpointer save_game_thread(gpointer data)
 void save_game(ls_game* game)
 {
     if (!game) {
+        LOG_WARN("Rejecting NULL game save");
         return;
     }
 
     g_mutex_lock(&save_mutex);
     if (!saving_enabled || atomic_exchange(&saving, true)) {
+        LOG_WARN("Rejecting game save during shutdown or while another save is already occurring");
         g_mutex_unlock(&save_mutex);
         return;
     }
