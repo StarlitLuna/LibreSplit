@@ -10,7 +10,7 @@ extern AppConfig cfg;
 static GThread* save_thread;
 static atomic_bool saving;
 static GMutex save_mutex;
-static bool saving_enabled;
+static bool saving_enabled = true;
 
 /**
  * @brief Duplicates the ls_game as snapshot. This is useful
