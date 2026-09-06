@@ -9,6 +9,8 @@ extern AppConfig cfg;
 
 static GThread* save_thread;
 static atomic_bool saving;
+static GMutex save_mutex;
+static bool saving_enabled;
 
 /**
  * @brief Duplicates the ls_game as snapshot. This is useful
@@ -226,7 +228,13 @@ static gpointer save_game_thread(gpointer data)
  */
 void save_game(ls_game* game)
 {
-    if (!game || atomic_exchange(&saving, true)) {
+    if (!game) {
+        return;
+    }
+
+    g_mutex_lock(&save_mutex);
+    if (!saving_enabled || atomic_exchange(&saving, true)) {
+        g_mutex_unlock(&save_mutex);
         return;
     }
 
@@ -238,10 +246,12 @@ void save_game(ls_game* game)
     ls_game* snapshot = create_snapshot(game);
     if (!snapshot) {
         atomic_store(&saving, false);
+        g_mutex_unlock(&save_mutex);
         return;
     }
 
     save_thread = g_thread_new("save_game", save_game_thread, snapshot);
+    g_mutex_unlock(&save_mutex);
 }
 
 /**
@@ -249,10 +259,15 @@ void save_game(ls_game* game)
  */
 void save_game_join(void)
 {
+    g_mutex_lock(&save_mutex);
+
+    // once we are exiting, prevent saves.
+    saving_enabled = false;
     if (save_thread) {
         g_thread_join(save_thread);
         save_thread = NULL;
     }
 
     atomic_store(&saving, false);
+    g_mutex_unlock(&save_mutex);
 }
