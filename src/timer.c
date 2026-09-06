@@ -802,7 +802,7 @@ static bool ls_write_save(json_t* json, const char* path)
     }
 
     GError* error = NULL;
-    if (!g_file_set_contents_full(real_path, contents, -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0644, &error)) {
+    if (!g_file_set_contents_full(real_path, contents, -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0666, &error)) {
         LOG_ERRF("save game: failed to write splits to '%s': %s", path, error->message);
         g_clear_error(&error);
         goto save_failed;
