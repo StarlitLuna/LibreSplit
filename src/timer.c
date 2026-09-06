@@ -9,6 +9,7 @@
 #include "lasr/auto-splitter.h"
 
 #include <assert.h>
+#include <glib/gstdio.h>
 #include <limits.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -743,6 +744,86 @@ bool ls_timer_has_rainbow_split(const ls_timer* timer)
 }
 
 /**
+ * @brief Atomically writes the splits file json to disk.
+ *
+ * @param json The full splits file json root.
+ * @param path The path to the splits file.
+ * @return bool save result
+ */
+static bool ls_write_save(json_t* json, const char* path)
+{
+    char* contents = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
+    if (!contents) {
+        LOG_ERR("save game: unable to create the json string");
+        return false;
+    }
+
+    GStatBuf path_info;
+    char* real_path = NULL;
+    if (g_lstat(path, &path_info) != 0) {
+        int error = errno;
+        if (error != ENOENT) {
+            LOG_ERRF("save game: unable to inspect path '%s': %s", path, g_strerror(error));
+            free(contents);
+            return false;
+        }
+
+        // file doesn't exist so it cannot be a symlink
+        // duplicate path so the call to free is always valid.
+        real_path = strdup(path);
+        if (real_path == NULL) {
+            LOG_ERR("save game: failed to duplicate path string");
+            free(contents);
+            return false;
+        }
+    } else {
+        // resolve symlinks
+        real_path = realpath(path, NULL);
+        if (real_path == NULL) {
+            LOG_ERRF("save game: failed to resolve path '%s': %s", path, g_strerror(errno));
+            free(contents);
+            return false;
+        }
+
+        if (access(real_path, W_OK) != 0) {
+            LOG_ERRF("save game: file is not writable '%s': %s", real_path, g_strerror(errno));
+            free(real_path);
+            free(contents);
+            return false;
+        }
+
+        GStatBuf file_info;
+        if (g_stat(real_path, &file_info) != 0) {
+            LOG_ERRF("save game: unable to inspect file '%s': %s", real_path, g_strerror(errno));
+            free(real_path);
+            free(contents);
+            return false;
+        }
+
+        // reject irregular files or hard links
+        if (!S_ISREG(file_info.st_mode) || file_info.st_nlink > 1) {
+            LOG_ERRF("save game: irregular file at '%s'", real_path);
+            free(real_path);
+            free(contents);
+            return false;
+        }
+    }
+
+    GError* error = NULL;
+    if (!g_file_set_contents_full(real_path, contents, -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0644, &error)) {
+        LOG_ERRF("save game: failed to write splits to '%s': %s", path, error->message);
+        g_clear_error(&error);
+        free(real_path);
+        free(contents);
+        return false;
+    }
+
+    free(real_path);
+    free(contents);
+    return true;
+}
+
+/**
  * Save the current game state to the splits file.
  *
  * @param game The ls_game object
@@ -813,18 +894,11 @@ int ls_game_save(const ls_game* game)
     if (game->height) {
         json_object_set_new(json, "height", json_integer(game->height));
     }
-    const int json_dump_result = json_dump_file(json, game->path, JSON_PRESERVE_ORDER | JSON_INDENT(2));
-    if (json_dump_result) {
-        char* json_dump = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
-        LOG_WARNF("Error dumping JSON:\n%s", json_dump != NULL ? json_dump : "");
-        LOG_WARNF("Error: '%d'", json_dump_result);
-        LOG_WARNF("Path: %s", game->path);
-        error = 1;
 
-        if (json_dump != NULL) {
-            free(json_dump);
-        }
+    if (!ls_write_save(json, game->path)) {
+        error = 1;
     }
+
     json_decref(json);
     return error;
 }
