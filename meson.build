@@ -34,7 +34,6 @@ jansson = dependency('jansson')
 openssl = dependency('openssl')
 
 libresplit_sources = files(
-    'src/attempts.c',
     'src/gui/actions.c',
     'src/gui/app_window.c',
     'src/gui/backends/x11.c',
@@ -87,6 +86,7 @@ libresplit_sources = files(
     'src/lasr/utils.c',
     'src/logging.c',
     'src/main.c',
+    'src/runs.c',
     'src/server.c',
 
     # Settings

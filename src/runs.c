@@ -1,48 +1,48 @@
-#include "attempts.h"
+#include "runs.h"
 #include "logging.h"
 #include <string.h>
 
 /**
  * @brief Creates a new attempts array and assigns it to
- * the pointers in attempts.
+ * the pointers in runs.
  *
- * @param attempts Pointer to the memory location to store the new array
+ * @param runs Pointer to the memory location to store the new array
  * @return int 0 on success otherwise failure
  */
-int ls_attempts_create(ls_attempts** attempts)
+int ls_runs_create(ls_runs** runs)
 {
     int error = 0;
-    ls_attempts* self = calloc(1, sizeof(ls_attempts));
+    ls_runs* self = calloc(1, sizeof(ls_runs));
     if (self == NULL) {
         error = 1;
-        goto ls_attempts_create_error;
+        goto ls_runs_create_error;
     }
 
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
         error = 1;
-        goto ls_attempts_create_error;
+        goto ls_runs_create_error;
     }
 
     self->size = INITIAL_ATTEMPTS_ARRAY_SIZE;
     self->count = 0;
 
-ls_attempts_create_error:
+ls_runs_create_error:
     if (error) {
         if (self) {
-            ls_attempts_release(self);
+            ls_runs_release(self);
         }
 
         return error;
     }
 
-    // free old attempts before replacing.
-    if (*attempts) {
-        ls_attempts_release(*attempts);
-        *attempts = 0;
+    // free old runs before replacing.
+    if (*runs) {
+        ls_runs_release(*runs);
+        *runs = 0;
     }
 
-    *attempts = self;
+    *runs = self;
     return 0;
 }
 
@@ -62,7 +62,7 @@ static void ls_attempt_release(ls_attempt* attempt)
  *
  * @param self the attempts instance
  */
-void ls_attempts_release(ls_attempts* self)
+void ls_runs_release(ls_runs* self)
 {
     for (size_t i = 0; i < self->count; i++) {
         ls_attempt_release(self->attempts[i]);
@@ -78,7 +78,7 @@ void ls_attempts_release(ls_attempts* self)
  * @param self The attempts instance
  * @return bool Whether or not the reallocation succeeded
  */
-static bool grow(ls_attempts* self)
+static bool grow(ls_runs* self)
 {
     size_t new_size = self->size + ((size_t)(self->size / 2));
     if (new_size > MAX_ATTEMPTS_ARRAY_CAPACITTY) {
@@ -113,7 +113,7 @@ static bool grow(ls_attempts* self)
  * @param attempt The attempt instance to append.
  * @return Whether or not the array grew successfully. When no growth is needed, always true
  */
-bool ls_attempts_append(ls_attempts* self, ls_attempt* attempt)
+bool ls_runs_append(ls_runs* self, ls_attempt* attempt)
 {
     self->attempts[self->count++] = attempt;
     if (self->count == self->size) {
@@ -129,7 +129,7 @@ bool ls_attempts_append(ls_attempts* self, ls_attempt* attempt)
  * @param self The current attempts instance.
  * @return bool Whether or not the clear succeeded.
  */
-bool ls_attempts_clear(ls_attempts* self)
+bool ls_runs_clear(ls_runs* self)
 {
     for (size_t i = 0; i < self->count; i++) {
         ls_attempt_release(self->attempts[i]);

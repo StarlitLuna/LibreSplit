@@ -27,13 +27,13 @@ typedef struct ls_attempt {
     ls_time* split_times;
 } ls_attempt;
 
-typedef struct ls_attempts {
+typedef struct ls_runs {
     ls_attempt** attempts; /**< The attempts array */
     size_t count; /**< The number of attempts in the array i.e. used slots */
     size_t size; /**< The current actual allocation size of the array i.e. total slots */
-} ls_attempts;
+} ls_runs;
 
-int ls_attempts_create(ls_attempts** attempts);
-void ls_attempts_release(ls_attempts* attempts);
-bool ls_attempts_append(ls_attempts* self, ls_attempt* attempt);
-bool ls_attempts_clear(ls_attempts* self);
+int ls_runs_create(ls_runs** attempts);
+void ls_runs_release(ls_runs* attempts);
+bool ls_runs_append(ls_runs* self, ls_attempt* attempt);
+bool ls_runs_clear(ls_runs* self);
