@@ -58,9 +58,9 @@ static void ls_attempt_release(ls_attempt* attempt)
 }
 
 /**
- * @brief Frees all attempts data
+ * @brief Frees all runs data
  *
- * @param self the attempts instance
+ * @param self the runs instance
  */
 void ls_runs_release(ls_runs* self)
 {
@@ -75,7 +75,7 @@ void ls_runs_release(ls_runs* self)
 /**
  * @brief Resizes the dynamic array at a rate of 1.5x its current size
  *
- * @param self The attempts instance
+ * @param self The runs instance
  * @return bool Whether or not the reallocation succeeded
  */
 static bool grow(ls_runs* self)
@@ -88,7 +88,7 @@ static bool grow(ls_runs* self)
     size_t old_size = self->size;
     ls_attempt** new_attempts = realloc(self->attempts, new_size * sizeof(ls_attempt*));
     if (new_attempts == NULL) {
-        LOG_WARNF("unable to reallocate attempts to new size of: %zu", new_size);
+        LOG_WARNF("unable to reallocate runs to new size of: %zu", new_size);
         return false;
     }
 
@@ -109,9 +109,9 @@ static bool grow(ls_runs* self)
  * When growth fails we should prevent new runs since storing the
  * attempt after that point becomes impossible.
  *
- * @param self The attempts instance.
- * @param attempt The attempt instance to append.
- * @return Whether or not the array grew successfully. When no growth is needed, always true
+ * @param self The runs instance.
+ * @param attempt The attempt instance to append to runs.
+ * @return Whether or not the array grew successfully. When no growth is needed, always true.
  */
 bool ls_runs_append(ls_runs* self, ls_attempt* attempt)
 {
@@ -126,7 +126,7 @@ bool ls_runs_append(ls_runs* self, ls_attempt* attempt)
 /**
  * @brief Clears the array and reduces memory usage.
  *
- * @param self The current attempts instance.
+ * @param self The current runs instance.
  * @return bool Whether or not the clear succeeded.
  */
 bool ls_runs_clear(ls_runs* self)
@@ -138,7 +138,7 @@ bool ls_runs_clear(ls_runs* self)
     free(self->attempts);
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
-        LOG_WARN("unable to allocate attempts");
+        LOG_WARN("unable to allocate runs after clear");
         return false;
     }
 
