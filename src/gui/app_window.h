@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/attempts.h"
 #include "src/gui/welcome_box.h"
 #include "src/keybinds/keybinds.h"
 #include "src/opts.h"
@@ -41,6 +42,7 @@ typedef struct _LSAppWindow {
     char data_path[PATH_MAX]; /*!< The path to the libresplit user config directory */
     ls_game* game;
     ls_timer* timer;
+    ls_attempts* attempts;
     GdkDisplay* display;
     GtkWidget* container;
     LSWelcomeBox* welcome_box;

@@ -118,6 +118,10 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
         ls_game_release(win->game);
         win->game = 0;
     }
+    if (win->attempts) {
+        ls_attempts_release(win->attempts);
+        win->attempts = 0;
+    }
     if (ls_game_create(&win->game, file, &error_msg)) {
         win->game = 0;
         if (error_msg) {
@@ -128,6 +132,8 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
         }
     } else if (ls_timer_create(&win->timer, win->game)) {
         win->timer = 0;
+    } else if (ls_attempts_create(&win->attempts)) {
+        win->attempts = 0;
     } else {
         ls_app_window_show_game(win);
     }

@@ -1001,7 +1001,7 @@ int ls_run_save(ls_timer* timer, const char* reason)
 }
 
 /**
- * Frees all the timer information, but not itself
+ * Frees all the timer information
  *
  * @param timer The timer instance
  */
@@ -1069,7 +1069,7 @@ static void reset_timer(ls_timer* timer)
 /**
  * Creates a timer instance linked to a game instance, allocating necessary memory
  *
- * @param timer_ptr Apointer to where the allocated timer instance should be stored
+ * @param timer_ptr A pointer to where the allocated timer instance should be stored
  * @param game The game instance to link the timer to
  * @return Whether the timer creation had an error or not
  */

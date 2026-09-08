@@ -34,6 +34,7 @@ jansson = dependency('jansson')
 openssl = dependency('openssl')
 
 libresplit_sources = files(
+    'src/attempts.c',
     'src/gui/actions.c',
     'src/gui/app_window.c',
     'src/gui/backends/x11.c',
