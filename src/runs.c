@@ -69,6 +69,9 @@ void ls_runs_release(ls_runs* self)
     }
 
     free(self->attempts);
+    self->count = 0;
+    self->size = 0;
+
     free(self);
 }
 
