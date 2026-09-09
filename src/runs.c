@@ -89,7 +89,7 @@ void ls_runs_release(ls_runs* self)
  * @param self The runs instance
  * @return bool Whether or not the reallocation succeeded
  */
-static bool grow(ls_runs* self)
+static bool ls_attempts_grow(ls_runs* self)
 {
     if (self->size >= MAX_ATTEMPTS_ARRAY_CAPACITTY) {
         // TODO: Dump this to disk first.
@@ -133,7 +133,7 @@ bool ls_runs_append(ls_runs* self, ls_attempt* attempt)
 {
     self->attempts[self->count++] = attempt;
     if (self->count == self->size) {
-        return grow(self);
+        return ls_attempts_grow(self);
     }
 
     return true;
