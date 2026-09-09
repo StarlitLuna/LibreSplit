@@ -91,9 +91,14 @@ void ls_runs_release(ls_runs* self)
  */
 static bool grow(ls_runs* self)
 {
+    if (self->size >= MAX_ATTEMPTS_ARRAY_CAPACITTY) {
+        // TODO: Dump this to disk first.
+        return ls_runs_clear(self);
+    }
+
     size_t new_size = self->size + ((size_t)(self->size / 2));
     if (new_size > MAX_ATTEMPTS_ARRAY_CAPACITTY) {
-        // TODO: Dump this to disk and clear capacity.
+        new_size = MAX_ATTEMPTS_ARRAY_CAPACITTY;
     }
 
     size_t old_size = self->size;
