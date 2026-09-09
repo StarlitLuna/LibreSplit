@@ -74,7 +74,7 @@ void set_main_window_keep_above(gboolean setting)
         return;
     }
 
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    LSAppWindow* win = ls_get_main_app_window();
     if (win != NULL && win->opts.win_on_top) {
         x11_set_keep_above(GTK_WINDOW(win), setting);
     }

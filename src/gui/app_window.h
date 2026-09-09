@@ -3,13 +3,15 @@
 #include "src/gui/welcome_box.h"
 #include "src/keybinds/keybinds.h"
 #include "src/opts.h"
-#include "src/runs.h"
 #include "src/timer.h"
 
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
 #define WINDOW_PAD (8)
+
+/** forward declaration of ls_run from timer.h */
+typedef struct ls_runs ls_runs;
 
 G_DECLARE_FINAL_TYPE(LSApp, ls_app, LS, APP, GtkApplication)
 #define LS_APP_TYPE (ls_app_get_type())
@@ -65,7 +67,7 @@ void set_window_decorations(LSAppWindow* win);
 void toggle_decorations(LSAppWindow* win);
 void toggle_win_on_top(LSAppWindow* win);
 
-LSAppWindow* ls_get_main_app_window(GtkApplication* app);
+LSAppWindow* ls_get_main_app_window(void);
 LSAppWindow* ls_app_window_new(LSApp* app);
 void ls_app_startup(GApplication* app);
 void ls_app_activate(GApplication* app);

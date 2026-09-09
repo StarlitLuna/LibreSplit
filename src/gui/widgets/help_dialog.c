@@ -57,7 +57,7 @@ static gboolean build_help_dialog(gpointer data)
 
     LOG_DEBUG("Opening Help Window...");
     GtkApplication* app = GTK_APPLICATION(data);
-    LSAppWindow* win = ls_get_main_app_window(app);
+    LSAppWindow* win = ls_get_main_app_window();
     if (win == NULL) {
         LOG_ERR("Main application window was not found");
         return G_SOURCE_REMOVE;

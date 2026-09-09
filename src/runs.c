@@ -54,6 +54,14 @@ ls_runs_create_error:
 static void ls_attempt_release(ls_attempt* attempt)
 {
     free(attempt->split_times);
+    free(attempt->segment_times);
+    free(attempt->reason);
+
+    for (unsigned int i = 0; i < attempt->split_count; ++i) {
+        free(attempt->split_titles[i]);
+    }
+
+    free(attempt->split_titles);
     free(attempt);
 }
 
@@ -148,4 +156,70 @@ bool ls_runs_clear(ls_runs* self)
     self->size = INITIAL_ATTEMPTS_ARRAY_SIZE;
     self->count = 0;
     return true;
+}
+
+/**
+ * @brief Creates a new persistent attempt based on the current timer state
+ * and timer completion reason.
+ *
+ * @param timer The current timer instance.
+ * @param reason The reason for the run termination.
+ * @return ls_attempt*
+ */
+ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
+{
+    if (reason == NULL) {
+        LOG_WARN("invalid NULL reason provided");
+        return NULL;
+    }
+
+    ls_attempt* attempt = calloc(1, sizeof(ls_attempt));
+    if (attempt == NULL) {
+        LOG_WARN("unable to allocate a new attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
+    const size_t split_count = timer->game->split_count;
+    size_t time_size = split_count * sizeof(ls_time);
+    attempt->split_count = split_count;
+    attempt->split_times = calloc(1, time_size);
+    if (attempt->split_times == NULL) {
+        LOG_WARN("unable to allocate `split_times` for the attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
+    attempt->segment_times = calloc(1, time_size);
+    if (attempt->segment_times == NULL) {
+        LOG_WARN("unable to allocate `segment_times` for the attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
+    attempt->reason = strdup(reason);
+    if (attempt->segment_times == NULL) {
+        LOG_WARN("unable to duplicate `reason` for the attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
+    attempt->split_titles = calloc(1, split_count * sizeof(char*));
+    if (attempt->segment_times == NULL) {
+        LOG_WARN("unable to allocate `segment_times` for the attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
+    for (unsigned int i = 0; i < split_count; ++i) {
+        attempt->split_titles[i] = strdup(timer->game->split_titles[i]);
+        if (attempt->segment_times == NULL) {
+            LOG_WARNF("unable to duplicate `split_titles[%u]` for the attempt", i);
+            goto ls_runs_new_attempt_failed;
+        }
+    }
+
+    memcpy(attempt->split_times, timer->split_times, time_size);
+    memcpy(attempt->segment_times, timer->segment_times, time_size);
+    attempt->final_time = ls_timer_get_time(timer, true);
+    return attempt;
+
+ls_runs_new_attempt_failed:
+    ls_attempt_release(attempt);
+    return NULL;
 }

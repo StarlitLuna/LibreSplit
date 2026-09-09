@@ -10,6 +10,7 @@
 #include "src/lasr/auto-splitter.h"
 #include "src/lasr/utils.h"
 #include "src/logging.h"
+#include "src/runs.h"
 #include "src/settings/settings.h"
 #include "src/settings/utils.h"
 #include <gtk/gtk.h>
@@ -106,11 +107,7 @@ void open_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    win = ls_app_window_new(LS_APP(app));
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
         return;
@@ -173,11 +170,7 @@ void save_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    win = ls_app_window_new(LS_APP(app));
     if (win->game && win->timer) {
         int width, height;
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
@@ -243,11 +236,7 @@ void reload_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    win = ls_app_window_new(LS_APP(app));
     if (win->game) {
         path = strdup(win->game->path);
         if (!path) {
@@ -275,11 +264,7 @@ void close_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    win = ls_app_window_new(LS_APP(app));
     timer_stop_and_reset(win);
 
     if (win->game && win->timer) {
@@ -292,6 +277,10 @@ void close_activated(GSimpleAction* action,
     if (win->game) {
         ls_game_release(win->game);
         win->game = 0;
+    }
+    if (win->runs) {
+        ls_runs_release(win->runs);
+        win->runs = 0;
     }
     gtk_widget_set_size_request(GTK_WIDGET(win), -1, -1);
 }
@@ -326,10 +315,7 @@ void quit_activated(GSimpleAction* action,
 
     atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
+    win = ls_app_window_new(LS_APP(app));
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
@@ -368,11 +354,7 @@ void toggle_auto_splitter(GSimpleAction* action, GVariant* value, gpointer user_
 void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app)
 {
     gboolean active = g_variant_get_boolean(value);
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    LSAppWindow* win = ls_app_window_new(LS_APP(app));
     x11_set_keep_above(GTK_WINDOW(win), active);
     win->opts.win_on_top = active;
     g_simple_action_set_state(action, value);
@@ -429,11 +411,7 @@ void open_auto_splitter(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
-
+    win = ls_app_window_new(LS_APP(app));
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
         return;

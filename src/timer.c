@@ -3,7 +3,11 @@
  * Implementation of the timer
  */
 #include "timer.h"
+#include "gui/app_window.h"
+#include "gui/game.h"
+#include "gui/widgets/dialog.h"
 #include "logging.h"
+#include "runs.h"
 #include "settings/utils.h"
 
 #include "lasr/auto-splitter.h"
@@ -1225,6 +1229,53 @@ int ls_timer_start(ls_timer* timer)
 }
 
 /**
+ * @brief Callback for saving the game to disk
+ * if user requests from a dialog option.
+ *
+ * @param data The `ls_game`
+ */
+static void ls_dialog_save_game(gpointer data)
+{
+    save_game((ls_game*)data);
+}
+
+static void ls_run_record(ls_timer* timer, const char* reason)
+{
+    LSAppWindow* win = ls_get_main_app_window();
+    ls_attempt* attempt = ls_runs_new_attempt(timer, reason);
+    if (attempt == NULL) {
+        const LSDialogOption options[] = {
+            {
+                .label = "_Yes",
+                .callback = ls_dialog_save_game,
+                .is_cancel = FALSE,
+                .is_default = TRUE,
+            },
+            {
+                .label = "_No",
+                .callback = NULL,
+                .is_cancel = TRUE,
+                .is_default = FALSE,
+            }
+        };
+
+        const LSDialogIcon icon = {
+            .source = "dialog-question",
+            .type = LS_DIALOG_ICON_NAME,
+        };
+
+        ls_dialog_open(GTK_WINDOW(win),
+            "LibreSplit",
+            "Save Failed",
+            "We could not record your game in memory, would you like to save your history now?",
+            &icon, options, G_N_ELEMENTS(options), win->game, NULL);
+        return;
+    }
+
+    ls_runs_append(win->runs, attempt);
+}
+
+/**
  * Performs a split
  *
  * @param timer The timer instance
@@ -1294,6 +1345,7 @@ int ls_timer_split(ls_timer* timer)
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_save(timer, "FINISHED");
+            ls_run_record(timer, "FINISHED");
         }
     }
 
@@ -1417,6 +1469,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     if (timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_save(timer, "RESET");
+            ls_run_record(timer, "RESET");
         }
     }
 
