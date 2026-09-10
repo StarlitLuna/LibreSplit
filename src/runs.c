@@ -1,6 +1,34 @@
 #include "runs.h"
 #include "logging.h"
+#include "src/gui/app_window.h"
+#include "src/settings/utils.h"
 #include <string.h>
+#include <sys/stat.h>
+
+/**
+ * @brief Sets today's date to the date buffer in YYYY-MM-DD format.
+ *
+ * @param date Pointer to a string of at least length 16.
+ * @return bool Whether or not fetching today's date was successful.
+ */
+static bool set_date(char* date)
+{
+    time_t now = time(NULL);
+    if (now == (time_t)-1) {
+        return false;
+    }
+
+    struct tm local_time;
+    if (localtime_r(&now, &local_time) == NULL) {
+        return false;
+    }
+
+    if (strftime(date, 16, "%Y-%m-%d", &local_time) == 0) {
+        return false;
+    }
+
+    return true;
+}
 
 /**
  * @brief Creates a new attempts array and assigns it to
@@ -14,6 +42,11 @@ int ls_runs_create(ls_runs** runs)
     int error = 0;
     ls_runs* self = calloc(1, sizeof(ls_runs));
     if (self == NULL) {
+        error = 1;
+        goto ls_runs_create_error;
+    }
+
+    if (!set_date(self->date)) {
         error = 1;
         goto ls_runs_create_error;
     }
@@ -154,6 +187,7 @@ bool ls_runs_clear(ls_runs* self)
     free(self->attempts);
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
+        // This should never happens since we should have freed more memory than we're requesting.
         LOG_WARN("unable to allocate runs after clear");
         return false;
     }
@@ -173,6 +207,11 @@ bool ls_runs_clear(ls_runs* self)
  */
 ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
 {
+    ls_time final_time = ls_timer_get_time(timer, true);
+    if (ls_time_lte_zero(final_time)) {
+        return NULL;
+    }
+
     if (reason == NULL) {
         LOG_WARN("invalid NULL reason provided");
         return NULL;
@@ -185,8 +224,11 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
     }
 
     const size_t split_count = timer->game->split_count;
-    size_t time_size = split_count * sizeof(ls_time);
+    const size_t time_size = split_count * sizeof(ls_time);
     attempt->split_count = split_count;
+    strcpy(attempt->start_time, timer->start_time);
+    ls_run_set_time(attempt->end_time);
+
     attempt->split_times = calloc(1, time_size);
     if (attempt->split_times == NULL) {
         LOG_WARN("unable to allocate `split_times` for the attempt");
@@ -206,14 +248,14 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
     }
 
     attempt->split_titles = calloc(1, split_count * sizeof(char*));
-    if (attempt->segment_times == NULL) {
+    if (attempt->split_titles == NULL) {
         LOG_WARN("unable to allocate `segment_times` for the attempt");
         goto ls_runs_new_attempt_failed;
     }
 
     for (unsigned int i = 0; i < split_count; ++i) {
         attempt->split_titles[i] = strdup(timer->game->split_titles[i]);
-        if (attempt->segment_times == NULL) {
+        if (attempt->split_titles[i] == NULL) {
             LOG_WARNF("unable to duplicate `split_titles[%u]` for the attempt", i);
             goto ls_runs_new_attempt_failed;
         }
@@ -221,10 +263,123 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
 
     memcpy(attempt->split_times, timer->split_times, time_size);
     memcpy(attempt->segment_times, timer->segment_times, time_size);
-    attempt->final_time = ls_timer_get_time(timer, true);
+    attempt->final_time = final_time;
     return attempt;
 
 ls_runs_new_attempt_failed:
     ls_attempt_release(attempt);
     return NULL;
+}
+
+static json_t* get_or_create_runs_history(const ls_game* game, const char* date, char* path, json_error_t* json_error)
+{
+    const char* name = strrchr(game->path, '/');
+    name = name ? name + 1 : game->path;
+    const char* dot = strrchr(name, '.');
+
+    size_t len = strlen(game->path);
+    if (dot && dot != name && strcmp(name, "..") != 0) {
+        len = (size_t)(dot - game->path);
+    }
+
+    memcpy(path, game->path, len);
+    path[len] = '\0';
+
+    LSAppWindow* win = ls_get_main_app_window();
+    if (!create_default_directory(game->title, path, 0755, win ? GTK_WINDOW(win) : NULL)) {
+        return NULL;
+    }
+
+    char history_file[FILENAME_MAX + 1];
+    snprintf(history_file, FILENAME_MAX + 1, "/%s.json", date);
+    size_t history_file_len = strlen(history_file);
+    memcpy(path + len, history_file, history_file_len + 1);
+
+    struct stat st = { 0 };
+    if (stat(path, &st) == -1) {
+        GError* error = NULL;
+        if (!g_file_set_contents_full(path, "[]", -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0666, &error)) {
+            LOG_ERRF("save game: failed to create run history file at '%s': %s", path, error->message);
+            g_clear_error(&error);
+            return NULL;
+        }
+    }
+
+    return json_load_file(path, 0, json_error);
+}
+
+/**
+ * Saves the current runs history snapshot to today's runs file.
+ *
+ * @param snapshot The runs snapshot to save.
+ * @return int Any error code while saving.
+ */
+int ls_runs_save(const ls_runs* snapshot, const ls_game* game)
+{
+    LOG_DEBUG("Saving attempts history...");
+
+    char path[PATH_MAX];
+    json_error_t json_error = { 0 };
+    json_t* runs = get_or_create_runs_history(game, snapshot->date, path, &json_error);
+    if (!runs) {
+        if (json_error.line) {
+            LOG_ERRF("%s (%d:%d)", json_error.text, json_error.line, json_error.column);
+        }
+
+        return 1;
+    }
+
+    int error = 0;
+    for (size_t i = 0; i < snapshot->count; ++i) {
+        ls_attempt* attempt = snapshot->attempts[i];
+
+        // Root JSON Object
+        json_t* json = json_object();
+        json_t* final = json_object();
+        json_time_set(final, &attempt->final_time);
+        json_object_set_new(json, "start_time", json_string(attempt->start_time));
+        json_object_set_new(json, "end_time", json_string(attempt->end_time));
+        json_object_set_new(json, "final_time", final);
+        json_object_set_new(json, "reason", json_string(attempt->reason));
+
+        // Splits Array
+        json_t* splits = json_array();
+
+        for (size_t j = 0; j < attempt->split_count; ++j) {
+            json_t* split = json_object();
+
+            // Title
+            json_object_set_new(split, "title", json_string(attempt->split_titles[j]));
+
+            // Check if time is valid, avoids saving time on skipped splits
+            if (is_time_valid(attempt->split_times[j].game_time) && is_time_valid(attempt->split_times[j].real_time)) {
+                json_t* time = json_object();
+                json_time_set(time, &attempt->split_times[j]);
+                json_object_set_new(split, "time", time);
+                // Check if segment time is valid, avoids saving segment time AFTER skipped split
+                if (is_time_valid(attempt->segment_times[j].game_time) && is_time_valid(attempt->segment_times[j].real_time)) {
+                    json_t* segment = json_object();
+                    json_time_set(segment, &attempt->segment_times[j]);
+                    json_object_set_new(split, "segment", segment);
+                } else {
+                    json_object_set_new(split, "segment", json_null());
+                }
+            } else {
+                json_object_set_new(split, "time", json_null());
+                json_object_set_new(split, "segment", json_null());
+            }
+
+            json_array_append_new(splits, split);
+        }
+
+        json_object_set_new(json, "splits", splits);
+        json_array_append(runs, json);
+    }
+
+    if (!ls_write_save(runs, path)) {
+        error = 1;
+    }
+
+    json_decref(runs);
+    return error;
 }

@@ -482,6 +482,37 @@ gboolean ls_app_window_step(gpointer data)
     return TRUE;
 }
 
+/**
+ * @brief Sets the block state to the main app window.
+ *
+ * @param data Pointer to whether to set the block state on or off.
+ * @return gboolean Always G_SOURCE_REMOVE to remove from the thread queue.
+ */
+static gboolean ls_app_window_set_blocked_state(gpointer data)
+{
+    gboolean block_window = *((gboolean*)data);
+    LSAppWindow* win = ls_get_main_app_window();
+    GtkWidget* window = GTK_WIDGET(win);
+    gtk_widget_set_sensitive(window, !block_window);
+    gtk_widget_set_opacity(win->container, block_window ? 0.5 : 1.0);
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Sends a request to the main GTK thread to set the window's block state.
+ * This should be used to indicate to the user that something is happening
+ * (like an in progress save) that requires interaction with LibreSplit
+ * to block for a short while.
+ *
+ * @param block_window Whether to set the block state on or off.
+ */
+void ls_app_window_set_blocked(gboolean block_window)
+{
+    gboolean* block_window_request = g_new(gboolean, 1);
+    *block_window_request = block_window;
+    g_main_context_invoke_full(NULL, G_PRIORITY_DEFAULT, ls_app_window_set_blocked_state, block_window_request, g_free);
+}
+
 gboolean ls_app_window_draw(gpointer data)
 {
     LSAppWindow* win = data;
@@ -496,6 +527,7 @@ gboolean ls_app_window_draw(gpointer data)
     } else {
         gtk_widget_queue_draw(GTK_WIDGET(win));
     }
+
     return TRUE;
 }
 

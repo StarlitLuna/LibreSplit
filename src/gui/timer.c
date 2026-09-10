@@ -45,8 +45,8 @@ void timer_start_split(LSAppWindow* win)
         return;
 
     if (!win->timer->started) { // To start again a reset needs to happen
-        if (ls_timer_start(win->timer)) {
-            save_game(win->game);
+        if (!ls_timer_start(win->timer)) {
+            return;
         }
     } else {
         ls_timer_split(win->timer);
@@ -73,8 +73,8 @@ void timer_start(LSAppWindow* win)
     if (win->timer->running)
         return; // Timer is already running, do nothing
 
-    if (ls_timer_start(win->timer)) {
-        save_game(win->game);
+    if (!ls_timer_start(win->timer)) {
+        return;
     }
 
     for (GList* l = win->components; l != NULL; l = l->next) {

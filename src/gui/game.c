@@ -2,8 +2,10 @@
 #include "src/gui/component/components.h"
 #include "src/gui/theming.h"
 #include "src/logging.h"
+#include "src/runs.h"
 #include "src/settings/definitions.h"
 #include <gtk/gtk.h>
+#include <unistd.h>
 
 extern AppConfig cfg;
 
@@ -11,6 +13,11 @@ static GThread* save_thread;
 static atomic_bool saving;
 static GMutex save_mutex;
 static bool saving_enabled = true;
+
+typedef struct save_data {
+    ls_game* game;
+    ls_runs* runs;
+} save_data;
 
 /**
  * @brief Duplicates the ls_game as snapshot. This is useful
@@ -207,16 +214,31 @@ void ls_app_window_show_game(LSAppWindow* win)
  * @brief saves the game to the user's splits file. This function
  * should be asynchronous and run in its own thread.
  *
- * @param data A valid snapshot from `create_snapshot` of the current game state to save.
+ * @param data save_data containing a valid snapshot from `create_snapshot` of the current game state to save
+ *              along with an optional valid snapshot from `ls_runs_snapshot` of unsaved runs history.
  * @return gpointer unused
  */
 static gpointer save_game_thread(gpointer data)
 {
-    ls_game* snapshot = data;
-    ls_game_save(snapshot);
-    ls_game_release(snapshot);
+    save_data* snapshot = data;
+    ls_game_save(snapshot->game);
+
+    if (snapshot->runs) {
+        ls_runs_save(snapshot->runs, snapshot->game);
+        ls_runs_clear(snapshot->runs);
+    }
+
+    ls_game_release(snapshot->game);
+    free(snapshot);
+
     atomic_store(&saving, false);
+    ls_app_window_set_blocked(FALSE);
     return NULL;
+}
+
+bool is_saving(void)
+{
+    return atomic_load(&saving);
 }
 
 /**
@@ -246,13 +268,27 @@ void save_game(ls_game* game)
         save_thread = NULL;
     }
 
-    ls_game* snapshot = create_snapshot(game);
-    if (!snapshot) {
+    save_data* snapshot = calloc(1, sizeof(save_data));
+    if (snapshot == NULL) {
         atomic_store(&saving, false);
         g_mutex_unlock(&save_mutex);
         return;
     }
 
+    snapshot->game = create_snapshot(game);
+    if (snapshot->game == NULL) {
+        atomic_store(&saving, false);
+        g_mutex_unlock(&save_mutex);
+        return;
+    }
+
+    if (cfg.libresplit.save_run_history.value.b) {
+        LSAppWindow* win = ls_get_main_app_window();
+        snapshot->runs = win->runs;
+    }
+
+    // This should be imperceivable but block on save in case the user's machine is slow.
+    ls_app_window_set_blocked(TRUE);
     save_thread = g_thread_new("save_game", save_game_thread, snapshot);
     g_mutex_unlock(&save_mutex);
 }
