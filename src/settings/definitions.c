@@ -76,6 +76,12 @@ AppConfig cfg = {
             .value.b = true,
             .desc = "Save run history JSON files",
         },
+        .run_history_next_to_splits = {
+            .key = "run_history_next_to_splits",
+            .type = CFG_BOOL,
+            .value.b = false,
+            .desc = "Save run history files next to your splits file"
+        },
         .auto_save = {
             .key = "auto_save",
             .type = CFG_BOOL,
