@@ -125,7 +125,11 @@ void ls_runs_release(ls_runs* self)
 static bool ls_attempts_grow(ls_runs* self)
 {
     if (self->size >= MAX_ATTEMPTS_ARRAY_CAPACITTY) {
-        // TODO: Dump this to disk first.
+        LSAppWindow* win = ls_get_main_app_window();
+        if (win && win->game) {
+            ls_runs_save(self, win->game);
+        }
+
         return ls_runs_clear(self);
     }
 
