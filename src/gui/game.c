@@ -215,7 +215,7 @@ void ls_app_window_show_game(LSAppWindow* win)
  * should be asynchronous and run in its own thread.
  *
  * @param data save_data containing a valid snapshot from `create_snapshot` of the current game state to save
- *              along with an optional valid snapshot from `ls_runs_snapshot` of unsaved runs history.
+ *              along with an optional (live) pointer to unsaved runs history.
  * @return gpointer unused
  */
 static gpointer save_game_thread(gpointer data)
