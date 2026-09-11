@@ -277,23 +277,48 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
     name = name ? name + 1 : game->path;
     const char* dot = strrchr(name, '.');
 
-    size_t len = strlen(game->path);
+    bool next_to_splits = cfg.libresplit.run_history_next_to_splits.value.b;
+    const char* base = next_to_splits ? game->path : name;
+    size_t len = strlen(base);
     if (dot && dot != name && strcmp(name, "..") != 0) {
-        len = (size_t)(dot - game->path);
+        len = (size_t)(dot - base);
     }
 
-    memcpy(path, game->path, len);
-    path[len] = '\0';
+    int written;
+    if (next_to_splits) {
+        written = snprintf(path, PATH_MAX, "%.*s", (int)len, base);
+    } else {
+        char libresplit_directory[PATH_MAX];
+        get_libresplit_folder_path(libresplit_directory);
+        written = snprintf(path, PATH_MAX, "%s/runs/%.*s", libresplit_directory, (int)len, base);
+    }
 
+    if (written < 0 || written >= PATH_MAX) {
+        if (written < 0) {
+            LOG_ERRF("save game: error determining run histories save location: %s", g_strerror(errno));
+        } else {
+            LOG_ERR("save game: run histories save location is too long");
+        }
+
+        return NULL;
+    }
+
+    len = (size_t)written;
     LSAppWindow* win = ls_get_main_app_window();
     if (!create_default_directory(game->title, path, 0755, win ? GTK_WINDOW(win) : NULL)) {
         return NULL;
     }
 
-    char history_file[FILENAME_MAX + 1];
-    snprintf(history_file, FILENAME_MAX + 1, "/%s.json", date);
-    size_t history_file_len = strlen(history_file);
-    memcpy(path + len, history_file, history_file_len + 1);
+    written = snprintf(path + len, PATH_MAX - len, "/%s.json", date);
+    if (written < 0 || (size_t)written >= PATH_MAX - len) {
+        if (written < 0) {
+            LOG_ERRF("save game: error determining run histories save location: %s", g_strerror(errno));
+        } else {
+            LOG_ERR("save game: run histories save location is too long");
+        }
+
+        return NULL;
+    }
 
     struct stat st = { 0 };
     if (stat(path, &st) == -1) {
