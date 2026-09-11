@@ -62,6 +62,9 @@ typedef struct ls_game {
     ls_time* segment_times;
     ls_time* best_splits;
     ls_time* best_segments;
+    bool has_unsaved_pb;
+    bool has_unsaved_gold;
+    bool has_unsaved_rainbow;
 } ls_game;
 
 /**
@@ -129,9 +132,13 @@ bool ls_timer_has_gold_split(const ls_timer* timer);
 
 bool ls_timer_has_rainbow_split(const ls_timer* timer);
 
+bool ls_game_has_achievement(const ls_timer* timer);
+
 bool ls_write_save(json_t* json, const char* path);
 
 int ls_game_save(const ls_game* game);
+
+void ls_game_saved(void);
 
 void ls_game_release(ls_game* game);
 

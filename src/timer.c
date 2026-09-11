@@ -676,6 +676,7 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             if (split_time && split_time < pb_time) {
                 memcpy(game->split_times, timer->split_times, size);
                 memcpy(game->segment_times, timer->segment_times, size);
+                game->has_unsaved_pb = true;
             }
         }
 
@@ -688,18 +689,30 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             // update best game time splits
             if (split_time->game_time && split_time->game_time < best_split_time->game_time) {
                 best_split_time->game_time = split_time->game_time;
+                if (game->comparison_method == LS_GAME_TIME) {
+                    game->has_unsaved_rainbow = true;
+                }
             }
             // update best real time splits
             if (split_time->real_time && split_time->real_time < best_split_time->real_time) {
                 best_split_time->real_time = split_time->real_time;
+                if (game->comparison_method == LS_REAL_TIME) {
+                    game->has_unsaved_rainbow = true;
+                }
             }
             // update best game time segments
             if (segment_time->game_time && segment_time->game_time < best_segment_time->game_time) {
                 best_segment_time->game_time = segment_time->game_time;
+                if (game->comparison_method == LS_GAME_TIME) {
+                    game->has_unsaved_gold = true;
+                }
             }
             // update best real time segments
             if (segment_time->real_time && segment_time->real_time < best_segment_time->real_time) {
                 best_segment_time->real_time = segment_time->real_time;
+                if (game->comparison_method == LS_REAL_TIME) {
+                    game->has_unsaved_gold = true;
+                }
             }
         }
     }
@@ -744,6 +757,23 @@ bool ls_timer_has_rainbow_split(const ls_timer* timer)
             return true;
         }
     }
+    return false;
+}
+
+bool ls_game_has_achievement(const ls_timer* timer)
+{
+    if (!timer || !timer->game) {
+        return false;
+    }
+
+    if (timer->running && (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer))) {
+        return true;
+    }
+
+    if (timer->game->has_unsaved_pb || timer->game->has_unsaved_gold || timer->game->has_unsaved_rainbow) {
+        return true;
+    }
+
     return false;
 }
 
@@ -898,6 +928,23 @@ int ls_game_save(const ls_game* game)
 
     json_decref(json);
     return error;
+}
+
+void ls_game_saved(void)
+{
+    LSAppWindow* win = ls_get_main_app_window();
+    if (!win) {
+        return;
+    }
+
+    ls_game* game = win->game;
+    if (!game) {
+        return;
+    }
+
+    game->has_unsaved_pb = false;
+    game->has_unsaved_gold = false;
+    game->has_unsaved_rainbow = false;
 }
 
 /**

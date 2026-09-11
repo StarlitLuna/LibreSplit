@@ -82,11 +82,11 @@ AppConfig cfg = {
             .value.b = true,
             .desc = "Perform automatic saving after each attempt",
         },
-        .ask_on_gold = {
-            .key = "ask_on_gold",
+        .ask_on_achievement = {
+            .key = "ask_on_achievement",
             .type = CFG_BOOL,
             .value.b = true,
-            .desc = "Ask before quitting with unsaved gold splits",
+            .desc = "Ask before quitting with unsaved an unsaved achievement",
         },
         .ask_on_worse = {
             .key = "ask_on_worse",

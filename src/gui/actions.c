@@ -317,9 +317,9 @@ void quit_activated(GSimpleAction* action,
     LOG_DEBUG("Exit request sent to threads");
     win = ls_app_window_new(LS_APP(app));
 
-    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
-    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        if (cfg.libresplit.ask_on_gold.value.b) {
+    // Warn if the quit will lose an achievement, and allow the user to cancel the quit if they want to keep it
+    if (ls_game_has_achievement(win->timer)) {
+        if (cfg.libresplit.ask_on_achievement.value.b) {
             display_confirm_reset_dialog(perform_quit, win);
             return;
         }

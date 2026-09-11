@@ -221,7 +221,7 @@ void ls_app_window_show_game(LSAppWindow* win)
 static gpointer save_game_thread(gpointer data)
 {
     save_data* snapshot = data;
-    ls_game_save(snapshot->game);
+    int result = ls_game_save(snapshot->game);
 
     if (snapshot->runs) {
         ls_runs_save(snapshot->runs, snapshot->game);
@@ -230,6 +230,11 @@ static gpointer save_game_thread(gpointer data)
 
     ls_game_release(snapshot->game);
     free(snapshot);
+
+    // if the game saved successfully, call ls_game_saved event.
+    if (result == 0) {
+        ls_game_saved();
+    }
 
     atomic_store(&saving, false);
     ls_app_window_set_blocked(FALSE);
