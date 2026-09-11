@@ -86,7 +86,7 @@ AppConfig cfg = {
             .key = "ask_on_gold",
             .type = CFG_BOOL,
             .value.b = true,
-            .desc = "Ask before resetting a run with gold splits",
+            .desc = "Ask before quitting with unsaved gold splits",
         },
         .ask_on_worse = {
             .key = "ask_on_worse",
