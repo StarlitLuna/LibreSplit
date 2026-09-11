@@ -80,7 +80,7 @@ AppConfig cfg = {
             .key = "run_history_next_to_splits",
             .type = CFG_BOOL,
             .value.b = false,
-            .desc = "Save run history files next to your splits file"
+            .desc = "Save run history files next to your splits file",
         },
         .auto_save = {
             .key = "auto_save",
