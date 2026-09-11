@@ -766,7 +766,7 @@ bool ls_game_has_achievement(const ls_timer* timer)
         return false;
     }
 
-    if (timer->running && (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer))) {
+    if (timer->started && (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer))) {
         return true;
     }
 
@@ -1226,6 +1226,7 @@ static void ls_run_record(ls_timer* timer, const char* reason)
         return;
     }
 
+    // TODO: Should we close LibreSplit if this hypothetically fails?
     ls_runs_append(win->runs, attempt);
 }
 
@@ -1299,6 +1300,10 @@ int ls_timer_split(ls_timer* timer)
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "FINISHED");
+        }
+
+        if (cfg.libresplit.auto_save.value.b) {
+            save_game((ls_game*)timer->game);
         }
     }
 

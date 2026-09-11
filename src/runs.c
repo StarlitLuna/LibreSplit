@@ -86,12 +86,18 @@ ls_runs_create_error:
  */
 static void ls_attempt_release(ls_attempt* attempt)
 {
+    if (attempt == NULL) {
+        return;
+    }
+
     free(attempt->split_times);
     free(attempt->segment_times);
     free(attempt->reason);
 
-    for (unsigned int i = 0; i < attempt->split_count; ++i) {
-        free(attempt->split_titles[i]);
+    if (attempt->split_times) {
+        for (unsigned int i = 0; i < attempt->split_count; ++i) {
+            free(attempt->split_titles[i]);
+        }
     }
 
     free(attempt->split_titles);
@@ -402,7 +408,7 @@ int ls_runs_save(const ls_runs* snapshot, const ls_game* game)
         }
 
         json_object_set_new(json, "splits", splits);
-        json_array_append(runs, json);
+        json_array_append_new(runs, json);
     }
 
     if (!ls_write_save(runs, path)) {

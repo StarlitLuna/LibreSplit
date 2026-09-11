@@ -150,6 +150,12 @@ void open_activated(GSimpleAction* action,
 static void perform_save_splits(gpointer window)
 {
     LSAppWindow* win = LS_APP_WINDOW(window);
+
+    // don't allow saving while we're in some invalid state or we're in the middle of a run.
+    if (win == NULL || win->game == NULL || win->timer == NULL || win->timer->started) {
+        return;
+    }
+
     ls_game_update_splits(win->game, win->timer);
     save_game(win->game);
 }
