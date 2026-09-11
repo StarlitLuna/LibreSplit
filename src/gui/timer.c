@@ -23,7 +23,9 @@ void timer_stop_and_reset(LSAppWindow* win)
     if (ls_timer_reset(win->timer, win->game)) {
         ls_app_window_clear_game(win);
         ls_app_window_show_game(win);
-        save_game(win->game);
+        if (cfg.libresplit.auto_save.value.b) {
+            save_game(win->game);
+        }
     }
 
     for (GList* l = win->components; l != NULL; l = l->next) {
@@ -104,7 +106,9 @@ void timer_stop_or_reset(LSAppWindow* win)
         if (ls_timer_reset(win->timer, win->game)) {
             ls_app_window_clear_game(win);
             ls_app_window_show_game(win);
-            save_game(win->game);
+            if (cfg.libresplit.auto_save.value.b) {
+                save_game(win->game);
+            }
         }
     }
 
@@ -140,7 +144,9 @@ static void perform_cancel_run(gpointer window)
     ls_timer_cancel(win->timer);
     ls_app_window_clear_game(win);
     ls_app_window_show_game(win);
-    save_game(win->game);
+    if (cfg.libresplit.auto_save.value.b) {
+        save_game(win->game);
+    }
 
     for (GList* l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;

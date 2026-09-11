@@ -26,7 +26,8 @@ Under the `libresplit` section, you will find the following settings:
 | `theme`            | String  | Default theme name                                           | `"standard"`   |
 | `theme_variant`    | String  | Default theme variant                                        | `""`           |
 | `decimals`         | Integer | Number of decimals to show on the timer (from 0 to 6)        | `2`            |
-| `save_run_history` | Boolean | Save JSON files with old runs in the runs subdirectory       | `true`         |
+| `save_run_history` | Boolean | Save JSON files with your attempts history                   | `true`         |
+| `auto_save`        | Boolean | Performs saves automatically in-between runs                 | `true`         |
 | `ask_on_gold`      | Boolean | Ask for confirmation before resetting a run with gold splits | `true`         |
 | `ask_on_worse`     | Boolean | Ask before saving a run that is worse than PB                | `true`         |
 
@@ -56,10 +57,10 @@ Alternatively, you can use the settings Dialog by right clicking the LibreSplit 
 
 ## Wayland Workaround
 
-To work around Wayland not allowing global hotkeys it's possible to use compatibility modes.  
-On KDE this involves going to Settings -> Legacy X11 App Support -> Listening for keystrokes: Always allowed  
-This is the least secure setting, but allows LibreSplit to see your inputs.  
+To work around Wayland not allowing global hotkeys it's possible to use compatibility modes.
+On KDE this involves going to Settings -> Legacy X11 App Support -> Listening for keystrokes: Always allowed
+This is the least secure setting, but allows LibreSplit to see your inputs.
 Then in the environment variables you need to set `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1`
 
-A full launch command for this looks like: `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1 libresplit`  
+A full launch command for this looks like: `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1 libresplit`
 A GUI edited KDE menu application may look like this: <img width="815" height="460" alt="image" src="https://github.com/user-attachments/assets/30f86d4c-7393-4108-9aee-02ae5d2964b4" />

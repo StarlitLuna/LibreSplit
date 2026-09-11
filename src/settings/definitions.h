@@ -38,6 +38,7 @@ typedef struct LibreSplitConfig {
     ConfigEntry theme_variant;
     ConfigEntry decimals;
     ConfigEntry save_run_history;
+    ConfigEntry auto_save;
     ConfigEntry ask_on_gold;
     ConfigEntry ask_on_worse;
 } LibreSplitConfig;

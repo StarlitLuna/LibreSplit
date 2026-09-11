@@ -76,6 +76,12 @@ AppConfig cfg = {
             .value.b = true,
             .desc = "Save run history JSON files",
         },
+        .auto_save = {
+            .key = "auto_save",
+            .type = CFG_BOOL,
+            .value.b = true,
+            .desc = "Perform automatic saving after each attempt",
+        },
         .ask_on_gold = {
             .key = "ask_on_gold",
             .type = CFG_BOOL,
