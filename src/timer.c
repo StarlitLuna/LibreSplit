@@ -1348,11 +1348,11 @@ int ls_timer_skip(ls_timer* timer)
  */
 int ls_timer_unsplit(ls_timer* timer)
 {
-    LOG_DEBUG("Undoing a split...");
-    if (timer->curr_split == 0) {
+    if (timer->curr_split == 0 || is_saving()) {
         return 0;
     }
 
+    LOG_DEBUG("Undoing a split...");
     unsigned int curr = --timer->curr_split;
     for (unsigned int i = curr; i < timer->game->split_count; ++i) {
         timer->split_times[i] = timer->game->split_times[i];
