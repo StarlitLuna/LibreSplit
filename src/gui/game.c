@@ -312,7 +312,7 @@ void save_game(ls_game* game)
 }
 
 /**
- * @brief Join the game save thread on exit.
+ * @brief Join the game save thread.
  */
 void save_game_join(bool exiting)
 {
