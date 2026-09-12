@@ -4,9 +4,9 @@
  */
 #include "auto-splitter.h"
 
-#include "src/logging.h"
 #include "./maps/maps.h"
 #include "functions.h"
+#include "src/logging.h"
 #include "utils.h"
 
 #include <lauxlib.h>
