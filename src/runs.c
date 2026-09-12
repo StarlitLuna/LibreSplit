@@ -255,7 +255,7 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
     }
 
     attempt->reason = strdup(reason);
-    if (attempt->segment_times == NULL) {
+    if (attempt->reason == NULL) {
         LOG_WARN("unable to duplicate `reason` for the attempt");
         goto ls_runs_new_attempt_failed;
     }
