@@ -242,15 +242,15 @@ static gpointer save_game_thread(gpointer data)
     }
 
 save_game_thread_finished:
+    // if the game saved successfully, call ls_game_saved event.
+    if (result == 0 && main_win) {
+        ls_game_saved(LS_APP_WINDOW(main_win)->game);
+    }
+
     g_clear_object(&main_win);
     g_weak_ref_clear(&snapshot->main_win);
     ls_game_release(snapshot->game);
     free(snapshot);
-
-    // if the game saved successfully, call ls_game_saved event.
-    if (result == 0) {
-        ls_game_saved();
-    }
 
     atomic_store(&saving, false);
     ls_app_window_set_blocked(FALSE);

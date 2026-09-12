@@ -138,7 +138,7 @@ bool ls_write_save(json_t* json, const char* path);
 
 int ls_game_save(const ls_game* game);
 
-void ls_game_saved(void);
+void ls_game_saved(ls_game* game);
 
 void ls_game_release(ls_game* game);
 

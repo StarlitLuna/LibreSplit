@@ -930,14 +930,8 @@ int ls_game_save(const ls_game* game)
     return error;
 }
 
-void ls_game_saved(void)
+void ls_game_saved(ls_game* game)
 {
-    LSAppWindow* win = ls_get_main_app_window();
-    if (!win) {
-        return;
-    }
-
-    ls_game* game = win->game;
     if (!game) {
         return;
     }
