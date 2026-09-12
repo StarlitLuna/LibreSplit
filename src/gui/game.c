@@ -294,6 +294,7 @@ void save_game(ls_game* game)
 
     snapshot->game = create_snapshot(game);
     if (snapshot->game == NULL) {
+        free(snapshot);
         atomic_store(&saving, false);
         g_mutex_unlock(&save_mutex);
         return;
