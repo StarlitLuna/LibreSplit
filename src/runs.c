@@ -95,7 +95,7 @@ static void ls_attempt_release(ls_attempt* attempt)
     free(attempt->reason);
 
     if (attempt->split_times) {
-        for (unsigned int i = 0; i < attempt->split_count; ++i) {
+        for (unsigned int i = 0; i < attempt->curr_split; ++i) {
             free(attempt->split_titles[i]);
         }
     }
@@ -234,10 +234,10 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
         goto ls_runs_new_attempt_failed;
     }
 
-    const size_t split_count = timer->game->split_count;
+    attempt->split_count = timer->game->split_count;
     const size_t curr_split = timer->curr_split;
     const size_t time_size = curr_split * sizeof(ls_time);
-    attempt->split_count = split_count;
+
     attempt->curr_split = curr_split;
     strcpy(attempt->start_time, timer->start_time);
     ls_run_set_time(attempt->end_time);
