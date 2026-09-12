@@ -7,10 +7,11 @@
  * the maximum amount of memory our in-memory attempts history
  * will be MAX_ATTEMPTS_ARRAY_CAPACITTY * sizeof(ls_attempt)
  *
- * This memory is not all allocated up front, this would truly require
- * the user to sit there doing *completed* runs for years without ever
- * saving or closing to reach theoreticaly "large" memory usage in the
- * hundreds of megabytes territory.
+ * This memory is not all allocated up front, and the size of ls_attempt
+ * is itself dynamic based on how many splits were completed before reset.
+ * Given that, this would truly require the user to sit there doing *completed*
+ * runs for years without ever saving or closing LibreSplit to reach theoreticaly
+ * "large" memory usage in the hundreds of megabytes territory.
  */
 #define INITIAL_ATTEMPTS_ARRAY_SIZE 16 // 2^4
 #define MAX_ATTEMPTS_ARRAY_CAPACITTY 524288 // 2^19
