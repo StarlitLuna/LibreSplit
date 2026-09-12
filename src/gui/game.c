@@ -1,6 +1,7 @@
 #include "game.h"
 #include "src/gui/component/components.h"
 #include "src/gui/theming.h"
+#include "src/gui/widgets/alert.h"
 #include "src/logging.h"
 #include "src/runs.h"
 #include "src/settings/definitions.h"
@@ -221,13 +222,24 @@ void ls_app_window_show_game(LSAppWindow* win)
 static gpointer save_game_thread(gpointer data)
 {
     save_data* snapshot = data;
+    LSAppWindow* win = ls_get_main_app_window();
+    GtkWindow* window = win ? GTK_WINDOW(win) : NULL;
     int result = ls_game_save(snapshot->game);
+    if (result) {
+        ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your game.\n If this continues check your logs for errors.");
+        goto save_game_thread_finished;
+    }
 
     if (snapshot->runs) {
-        ls_runs_save(snapshot->runs, snapshot->game);
+        if (ls_runs_save(snapshot->runs, snapshot->game)) {
+            ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your runs history.\n If this continues check your logs for errors.");
+            goto save_game_thread_finished;
+        }
+
         ls_runs_clear(snapshot->runs);
     }
 
+save_game_thread_finished:
     ls_game_release(snapshot->game);
     free(snapshot);
 
@@ -301,17 +313,19 @@ void save_game(ls_game* game)
 /**
  * @brief Join the game save thread on exit.
  */
-void save_game_join(void)
+void save_game_join(bool exiting)
 {
     g_mutex_lock(&save_mutex);
 
-    // once we are exiting, prevent saves.
-    saving_enabled = false;
+    if (exiting) {
+        // once we are exiting, prevent saves.
+        saving_enabled = false;
+    }
+
     if (save_thread) {
         g_thread_join(save_thread);
         save_thread = NULL;
     }
 
-    atomic_store(&saving, false);
     g_mutex_unlock(&save_mutex);
 }

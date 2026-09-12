@@ -133,6 +133,7 @@ static bool ls_attempts_grow(ls_runs* self)
     if (self->size >= MAX_ATTEMPTS_ARRAY_CAPACITTY) {
         LSAppWindow* win = ls_get_main_app_window();
         if (win && win->game) {
+            // TODO: If this fails we don't handle it and then throw away attemp
             ls_runs_save(self, win->game);
         }
 
@@ -234,8 +235,10 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
     }
 
     const size_t split_count = timer->game->split_count;
-    const size_t time_size = split_count * sizeof(ls_time);
+    const size_t curr_split = timer->curr_split;
+    const size_t time_size = curr_split * sizeof(ls_time);
     attempt->split_count = split_count;
+    attempt->curr_split = curr_split;
     strcpy(attempt->start_time, timer->start_time);
     ls_run_set_time(attempt->end_time);
 
@@ -257,13 +260,13 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
         goto ls_runs_new_attempt_failed;
     }
 
-    attempt->split_titles = calloc(1, split_count * sizeof(char*));
+    attempt->split_titles = calloc(1, curr_split * sizeof(char*));
     if (attempt->split_titles == NULL) {
         LOG_WARN("unable to allocate `segment_times` for the attempt");
         goto ls_runs_new_attempt_failed;
     }
 
-    for (unsigned int i = 0; i < split_count; ++i) {
+    for (unsigned int i = 0; i < curr_split; ++i) {
         attempt->split_titles[i] = strdup(timer->game->split_titles[i]);
         if (attempt->split_titles[i] == NULL) {
             LOG_WARNF("unable to duplicate `split_titles[%u]` for the attempt", i);
@@ -380,7 +383,7 @@ int ls_runs_save(const ls_runs* snapshot, const ls_game* game)
         // Splits Array
         json_t* splits = json_array();
 
-        for (size_t j = 0; j < attempt->split_count; ++j) {
+        for (size_t j = 0; j < attempt->curr_split; ++j) {
             json_t* split = json_object();
 
             // Title

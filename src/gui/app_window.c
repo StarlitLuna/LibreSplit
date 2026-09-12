@@ -113,6 +113,7 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
 {
     LOG_DEBUG("Opening LibreSplit window");
     char* error_msg = NULL;
+    save_game_join(false);
 
     if (win->timer) {
         ls_app_window_clear_game(win);
@@ -378,7 +379,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
         main_win = NULL;
     }
 
-    save_game_join();
+    save_game_join(true);
     if (win->timer) {
         ls_timer_release(win->timer);
         win->timer = 0;

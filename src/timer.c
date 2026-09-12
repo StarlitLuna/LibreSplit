@@ -1296,6 +1296,7 @@ int ls_timer_split(ls_timer* timer)
     if (timer->curr_split == timer->game->split_count) {
         // Increment finished_count
         ++*timer->finished_count;
+        timer->started = 0;
         ls_timer_stop(timer);
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
@@ -1361,6 +1362,7 @@ int ls_timer_unsplit(ls_timer* timer)
         ls_time_clear(&timer->segment_deltas[i]);
     }
     if (timer->curr_split + 1 == timer->game->split_count) {
+        timer->started = 1;
         timer->running = true;
         atomic_store(&run_running, true);
     }

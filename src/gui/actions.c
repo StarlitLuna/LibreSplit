@@ -272,6 +272,7 @@ void close_activated(GSimpleAction* action,
 
     win = ls_app_window_new(LS_APP(app));
     timer_stop_and_reset(win);
+    save_game_join(false);
 
     if (win->game && win->timer) {
         ls_app_window_clear_game(win);
