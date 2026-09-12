@@ -493,8 +493,11 @@ static gboolean ls_app_window_set_blocked_state(gpointer data)
 {
     gboolean block_window = *((gboolean*)data);
     LSAppWindow* win = ls_get_main_app_window();
-    GtkWidget* window = GTK_WIDGET(win);
-    gtk_widget_set_sensitive(window, !block_window);
+    if (win == NULL || gtk_widget_in_destruction(GTK_WIDGET(win))) {
+        return G_SOURCE_REMOVE;
+    }
+
+    gtk_widget_set_sensitive(GTK_WIDGET(win), !block_window);
     gtk_widget_set_opacity(win->container, block_window ? 0.5 : 1.0);
     return G_SOURCE_REMOVE;
 }

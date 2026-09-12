@@ -267,6 +267,12 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
     }
 
     for (unsigned int i = 0; i < curr_split; ++i) {
+        // Accept empty split titles before trying to allocate memory for them.
+        if (timer->game->split_titles[i] == NULL) {
+            attempt->split_titles[i] = NULL;
+            continue;
+        }
+
         attempt->split_titles[i] = strdup(timer->game->split_titles[i]);
         if (attempt->split_titles[i] == NULL) {
             LOG_WARNF("unable to duplicate `split_titles[%u]` for the attempt", i);
@@ -318,7 +324,7 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
 
     len = (size_t)written;
     LSAppWindow* win = ls_get_main_app_window();
-    if (!create_default_directory(game->title, path, 0755, win ? GTK_WINDOW(win) : NULL)) {
+    if (!create_default_directory(game->title ? game->title : "runs history directory", path, 0755, win ? GTK_WINDOW(win) : NULL)) {
         return NULL;
     }
 

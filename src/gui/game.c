@@ -18,6 +18,7 @@ static bool saving_enabled = true;
 typedef struct save_data {
     ls_game* game;
     ls_runs* runs;
+    GWeakRef main_win;
 } save_data;
 
 /**
@@ -222,24 +223,27 @@ void ls_app_window_show_game(LSAppWindow* win)
 static gpointer save_game_thread(gpointer data)
 {
     save_data* snapshot = data;
-    LSAppWindow* win = ls_get_main_app_window();
-    GtkWindow* window = win ? GTK_WINDOW(win) : NULL;
+    GObject* main_win = g_weak_ref_get(&snapshot->main_win);
+    GtkWindow* win = main_win ? GTK_WINDOW(main_win) : NULL;
     int result = ls_game_save(snapshot->game);
     if (result) {
-        ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your game.\n If this continues check your logs for errors.");
+        ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\n If this continues check your logs for errors.");
         goto save_game_thread_finished;
     }
 
     if (snapshot->runs) {
         if (ls_runs_save(snapshot->runs, snapshot->game)) {
-            ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your runs history.\n If this continues check your logs for errors.");
+            ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\n If this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
 
+        // TODO: This should not be possible to fail so maybe quit libresplit if it does...
         ls_runs_clear(snapshot->runs);
     }
 
 save_game_thread_finished:
+    g_clear_object(&main_win);
+    g_weak_ref_clear(&snapshot->main_win);
     ls_game_release(snapshot->game);
     free(snapshot);
 
@@ -300,8 +304,10 @@ void save_game(ls_game* game)
         return;
     }
 
+    LSAppWindow* win = ls_get_main_app_window();
+    g_weak_ref_init(&snapshot->main_win, win ? G_OBJECT(win) : NULL);
+
     if (cfg.libresplit.save_run_history.value.b) {
-        LSAppWindow* win = ls_get_main_app_window();
         snapshot->runs = win->runs;
     }
 
