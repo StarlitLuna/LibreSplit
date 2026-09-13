@@ -165,16 +165,6 @@ void ls_app_startup(GApplication* app)
  */
 void ls_app_activate(GApplication* app)
 {
-    if (main_win != NULL) {
-        gtk_window_present(GTK_WINDOW(main_win));
-        return;
-    }
-
-    LOG_DEBUG("Initializing configuration");
-    if (!config_init()) {
-        LOG_WARN("Configuration failed to load, will use defaults");
-    }
-
     LSAppWindow* win = ls_app_window_new(LS_APP(app));
     gtk_window_present(GTK_WINDOW(win));
 
