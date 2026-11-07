@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glib.h>
 #include <jansson.h>
 #include <lua.h>
 #include <stdbool.h>
@@ -63,6 +64,7 @@ typedef struct SettingDefinition {
 } SettingDefinition;
 
 typedef struct Setting {
+    size_t order;
     SettingDefinition config;
     SettingVal val;
     bool set;
@@ -78,7 +80,8 @@ void lock_user_settings(void);
 void unlock_user_settings(void);
 void lasr_settings_clear(void);
 void lasr_settings_register(lua_State* L);
-int lasr_settings_load(lua_State* L);
+int lasr_settings_load(lua_State* L, GHashTable* target);
+GHashTable* lasr_settings_read(const char* filename, char** error);
 Setting* lasr_settings_lookup(const char* name);
 void lasr_setting_value_clear(SettingType type, SettingVal* value);
 bool lasr_setting_value_copy(SettingType type, const SettingVal* value, SettingVal* result);

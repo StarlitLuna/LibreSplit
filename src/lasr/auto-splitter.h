@@ -47,6 +47,7 @@ bool lasr_reset_loading(void);
 void lasr_lock(void);
 void lasr_unlock(void);
 void lasr_event(const char* name, const char* following);
+void lasr_lua_init(lua_State* L);
 void init_auto_splitter(void);
 void check_directories(void);
 void run_auto_splitter(void);

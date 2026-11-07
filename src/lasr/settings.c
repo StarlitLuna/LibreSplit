@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "auto-splitter.h"
 #include "src/gui/app_window.h"
 #include "src/logging.h"
 
@@ -1079,6 +1080,7 @@ static int define_setting(lua_State* L)
 
     luaL_checkstack(L, 4, "unable to load setting definition");
     Setting* setting = g_new0(Setting, 1);
+    setting->order = g_hash_table_size(settings);
     setting->config.key = g_strdup(key);
     DefinitionReader reader = { .path = g_string_new(key) };
     lua_pushcfunction(L, compile_definition);
@@ -1310,15 +1312,15 @@ lasr_user_settings_load_unlock:
 
 /**
  * @brief Load settings and define them for Lua.
- * Runs define_settings if it exists and creates the
- * settings hash table.
+ * Runs define_settings if it exists and applies the user's saved values.
  *
  * @param L The current lua state.
+ * @param target An empty caller-owned table, or NULL for the runtime table.
  * @return int 0 on success otherwise error #
  */
-int lasr_settings_load(lua_State* L)
+int lasr_settings_load(lua_State* L, GHashTable* target)
 {
-    if (settings) {
+    if (!target && settings) {
         return LUA_OK;
     }
 
@@ -1348,16 +1350,86 @@ int lasr_settings_load(lua_State* L)
         lua_pushliteral(L, "[settings] define_settings must be a function");
         status = LUA_ERRRUN;
     } else {
-        settings = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, free_setting);
+        GHashTable* previous = settings;
+        settings = target ? target : g_hash_table_new_full(g_str_hash, g_str_equal, NULL, free_setting);
         status = lua_pcall(L, 0, 0, 0);
         if (status != LUA_OK) {
-            lasr_settings_clear();
+            if (target) {
+                g_hash_table_remove_all(target);
+            } else {
+                lasr_settings_clear();
+            }
         } else {
             lasr_user_settings_load();
+        }
+
+        if (target) {
+            settings = previous;
         }
     }
 
     remove_define(L, function_index);
     lua_remove(L, function_index);
     return status;
+}
+
+/**
+ * @brief Ignores process selection while reading settings.
+ *
+ * @param L The current Lua state (unused).
+ * @return int Always 0.
+ */
+static int ignore_process(lua_State* L)
+{
+    return 0;
+}
+
+/**
+ * @brief Reads a script's settings and the user's saved values into a separate table.
+ *
+ * @pre Call after stop_auto_splitter.
+ * @param filename The selected Lua script's path.
+ * @param error Receives an error to free with g_free, or NULL on success.
+ * @return GHashTable* Settings to release with g_hash_table_unref, or NULL on failure.
+ */
+GHashTable* lasr_settings_read(const char* filename, char** error)
+{
+    *error = NULL;
+    if (atomic_load(&auto_splitter_enabled)) {
+        *error = g_strdup("Stop the auto-splitter before reading its settings.");
+        return NULL;
+    }
+
+    lua_State* L = luaL_newstate();
+    if (!L) {
+        *error = g_strdup("Could not create the Lua state.");
+        return NULL;
+    }
+
+    lasr_lock();
+    GHashTable* script_settings = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, free_setting);
+    lasr_lua_init(L);
+    lua_pushcfunction(L, ignore_process);
+    lua_setglobal(L, "process");
+    int status = luaL_loadfile(L, filename);
+    if (status == LUA_OK) {
+        status = lua_pcall(L, 0, 0, 0);
+    }
+
+    if (status == LUA_OK) {
+        status = lasr_settings_load(L, script_settings);
+    }
+
+    if (status != LUA_OK) {
+        const char* message = lua_tostring(L, -1);
+        *error = g_strdup(message ? message : "Could not read the auto-splitter settings.");
+    }
+
+    lua_close(L);
+    lasr_unlock();
+    if (status != LUA_OK) {
+        g_clear_pointer(&script_settings, g_hash_table_unref);
+    }
+
+    return script_settings;
 }

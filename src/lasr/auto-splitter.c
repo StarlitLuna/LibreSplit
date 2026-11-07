@@ -296,6 +296,21 @@ void disable_functions(lua_State* L, const char** functions)
 }
 
 /**
+ * @brief Sets up Lua with LASR's libraries, functions, globals, and settings.
+ *
+ * @param L The Lua state to initialize.
+ */
+void lasr_lua_init(lua_State* L)
+{
+    sandboxed_openlibs(L);
+    disable_functions(L, disabled_functions);
+    push_lasr_functions(L, luac_functions);
+    push_lasr_globals(L);
+    lasr_game_register(L);
+    lasr_settings_register(L);
+}
+
+/**
  * @brief Lua error function for generating a stacktrace.
  *
  * For use as the `errfunc` argument to `lua_pcall()`:
@@ -846,12 +861,7 @@ void run_auto_splitter(void)
 {
     LOG_DEBUG("Starting new Lua State")
     lua_State* L = luaL_newstate();
-    sandboxed_openlibs(L);
-    disable_functions(L, disabled_functions);
-    push_lasr_functions(L, luac_functions);
-    push_lasr_globals(L);
-    lasr_game_register(L);
-    lasr_settings_register(L);
+    lasr_lua_init(L);
 
     char current_file[PATH_MAX];
     strcpy(current_file, auto_splitter_file);
@@ -876,7 +886,7 @@ void run_auto_splitter(void)
     set_process_selection(true);
     int status = lua_pcall(L, 0, LUA_MULTRET, base);
     set_process_selection(false);
-    if (status != LUA_OK || lasr_settings_load(L) != LUA_OK) {
+    if (status != LUA_OK || lasr_settings_load(L, NULL) != LUA_OK) {
         // Error executing the file
         if (!lua_isnil(L, -1)) {
             const char* err = lua_tostring(L, -1);
