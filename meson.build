@@ -63,6 +63,11 @@ libresplit_sources = files(
     'src/gui/context_menu.c',
     'src/gui/dialogs.c',
 
+    # Splits Editor
+    'src/gui/editors/draft.c',
+    'src/gui/editors/splits.c',
+    'src/gui/editors/widgets/game.c',
+
     # GUI
     'src/gui/folders.c',
     'src/gui/game.c',
