@@ -1,7 +1,9 @@
 #include "src/gui/actions.h"
 #include "src/gui/app_window.h"
 #include "src/gui/backends/x11.h"
+#include "src/gui/editors/splits.h"
 #include "src/gui/folders.h"
+#include "src/gui/game.h"
 #include "src/gui/widgets/help_dialog.h"
 #include "src/gui/widgets/settings_dialog.h"
 #include "src/lasr/auto-splitter.h"
@@ -25,7 +27,9 @@ static const char* const resize_cursors[] = {
 };
 
 static const GActionEntry context_menu_actions[] = {
+    { "new-splits", new_activated },
     { "open-splits", open_activated },
+    { "edit-splits", ls_splits_editor_open },
     { "save-splits", save_activated },
     { "open-auto-splitter", open_auto_splitter },
     { "enable-auto-splitter", NULL, NULL, "false", toggle_auto_splitter },
@@ -54,6 +58,12 @@ static void sync_context_menu_state(LSAppWindow* win)
     gboolean can_save = win->game != NULL && win->timer != NULL && !win->timer->started;
     action = g_action_map_lookup_action(G_ACTION_MAP(win), "save-splits");
     g_simple_action_set_enabled(G_SIMPLE_ACTION(action), can_save);
+
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "edit-splits");
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(action), ls_splits_editor_can_open());
+
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "new-splits");
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(action), !is_saving() && atomic_load(&run_state) == LASR_NOT_STARTED);
 }
 
 /**
@@ -193,7 +203,9 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
         G_N_ELEMENTS(context_menu_actions),
         app);
 
+    g_menu_append(section, "New Splits", "win.new-splits");
     g_menu_append(section, "Open Splits", "win.open-splits");
+    g_menu_append(section, "Edit Splits", "win.edit-splits");
     g_menu_append(section, "Save Splits", "win.save-splits");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
     g_object_unref(section);

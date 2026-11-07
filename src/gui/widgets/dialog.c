@@ -46,6 +46,8 @@ typedef struct {
     LSFilePickerFilter* filters;
     gsize filters_count;
     LSFileSelectedCallback callback;
+    gboolean save;
+    char* initial_name;
 } LSFilePickerRequest;
 
 static atomic_uint dialog_count;
@@ -574,11 +576,13 @@ static void file_picker_request_free(LSFilePickerRequest* request)
     g_weak_ref_clear(&request->parent);
     g_free(request->title);
     g_free(request->path);
+    g_free(request->initial_name);
 
     if (request->filters_count > 0) {
         for (gsize i = 0; i < request->filters_count; i++) {
             g_free((gpointer)request->filters[i].name);
             g_free((gpointer)request->filters[i].pattern);
+            g_free((gpointer)request->filters[i].suffix);
         }
 
         g_free(request->filters);
@@ -607,7 +611,9 @@ static void file_picker_finish(GObject* diag, GAsyncResult* result, gpointer dat
     GError* error = NULL;
     LSFilePickerRequest* request = data;
     GtkFileDialog* dialog = GTK_FILE_DIALOG(diag);
-    GFile* file = gtk_file_dialog_open_finish(dialog, result, &error);
+    GFile* file = request->save
+        ? gtk_file_dialog_save_finish(dialog, result, &error)
+        : gtk_file_dialog_open_finish(dialog, result, &error);
     GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
 
     if (file != NULL) {
@@ -669,7 +675,14 @@ static gboolean file_picker_present(gpointer user_data)
         for (gsize i = 0; i < filters_count; i++) {
             GtkFileFilter* filter = gtk_file_filter_new();
             gtk_file_filter_set_name(filter, request->filters[i].name);
-            gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
+            if (request->filters[i].pattern) {
+                gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
+            }
+
+            if (request->filters[i].suffix) {
+                gtk_file_filter_add_suffix(filter, request->filters[i].suffix);
+            }
+
             g_list_store_append(filters, filter);
             allocated_filters[i] = filter;
 
@@ -690,7 +703,12 @@ static gboolean file_picker_present(gpointer user_data)
     gtk_file_dialog_set_initial_folder(dialog, folder);
     g_object_unref(folder);
 
-    gtk_file_dialog_open(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
+    if (request->save) {
+        gtk_file_dialog_set_initial_name(dialog, request->initial_name);
+        gtk_file_dialog_save(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
+    } else {
+        gtk_file_dialog_open(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
+    }
 
     if (filters_count > 0) {
         for (gsize i = 0; i < filters_count; i++) {
@@ -713,7 +731,7 @@ static gboolean file_picker_present(gpointer user_data)
  * along to the GTK queue.
  *
  * @param parent The window that owns the file picker - required
- * @param options The file picker config - all fields other than filters are required
+ * @param options The file picker config - title and path are required
  * @param callback Callback for a successful local file selection - required
  * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
  */
@@ -769,8 +787,9 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
             return FALSE;
         }
 
-        if (filter.pattern == NULL || filter.pattern[0] == '\0') {
-            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu].pattern was null or empty", i);
+        if ((filter.pattern == NULL || filter.pattern[0] == '\0')
+            && (filter.suffix == NULL || filter.suffix[0] == '\0')) {
+            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu] needs a pattern or suffix", i);
             return FALSE;
         }
 
@@ -790,6 +809,8 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
     request->title = g_strdup(options->title);
     request->path = g_strdup(options->path);
     request->callback = callback;
+    request->save = options->save;
+    request->initial_name = g_strdup(options->initial_name);
     request->filters = filters_count > 0 ? g_new(LSFilePickerFilter, filters_count) : NULL;
     request->filters_count = filters_count;
 
@@ -797,6 +818,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         LSFilePickerFilter filter = options->filters[i];
         request->filters[i].name = g_strdup(filter.name);
         request->filters[i].pattern = g_strdup(filter.pattern);
+        request->filters[i].suffix = g_strdup(filter.suffix);
         request->filters[i].is_default = filter.is_default;
     }
 

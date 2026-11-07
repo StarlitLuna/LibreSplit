@@ -4,6 +4,8 @@
 
 void open_activated(GSimpleAction* action, GVariant* parameter, gpointer app);
 
+void new_activated(GSimpleAction* action, GVariant* parameter, gpointer app);
+
 void save_activated(GSimpleAction* action, GVariant* parameter, gpointer app);
 
 void reload_activated(GSimpleAction* action, GVariant* parameter, gpointer app);

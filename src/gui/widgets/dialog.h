@@ -74,8 +74,9 @@ typedef struct {
 
 typedef struct {
     const char* name; /**< The name of the filter the user sees */
-    const char* pattern; /**< Glob pattern the filter uses */
+    const char* pattern; /**< Optional glob pattern. */
     gboolean is_default; /**< Whether or not this filter is the default */
+    const char* suffix; /**< Optional case-insensitive extension without the dot. */
 } LSFilePickerFilter;
 
 typedef struct {
@@ -83,6 +84,8 @@ typedef struct {
     const char* path; /**< Initial path that the file picker presents to the user */
     LSFilePickerFilter* filters; /**< Pointer to an array of filters */
     gsize filters_count; /**< The number of filters in the filters array */
+    gboolean save; /**< Choose a destination for saving instead of an existing file. */
+    const char* initial_name; /**< Optional suggested filename. */
 } LSFilePickerOptions;
 
 void set_main_window_keep_above(gboolean setting);

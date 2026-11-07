@@ -3,6 +3,7 @@
 #include "src/gui/app_window.h"
 #include "src/gui/backends/x11.h"
 #include "src/gui/dialogs.h"
+#include "src/gui/editors/splits.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
 #include "src/gui/widgets/alert.h"
@@ -87,16 +88,82 @@ static void open_splits_selected(GtkWindow* parent, const char* filename)
 }
 
 /**
- * Shows the "Open JSON Split File" dialog eventually using
- * the last known split folder. Also saves a new "last used split folder".
+ * @brief Creates an empty splits file, loads it, and opens the editor.
  *
- * @param action Usually NULL
- * @param parameter Usually NULL
- * @param app Pointer to the LibreSplit app.
+ * @param data The confirmed local filename to create or replace.
+ * @return gboolean Always G_SOURCE_REMOVE.
  */
-void open_activated(GSimpleAction* action,
-    GVariant* parameter,
-    gpointer app)
+static gboolean create_splits_file(gpointer data)
+{
+    const char* filename = data;
+    LSAppWindow* win = ls_get_main_app_window();
+    if (!win || is_saving() || atomic_load(&run_state) != LASR_NOT_STARTED) {
+        return G_SOURCE_REMOVE;
+    }
+
+    GError* error = NULL;
+    if (!g_file_set_contents(filename, "{\"splits\":[{}]}\n", -1, &error)) {
+        ls_alert_error(GTK_WINDOW(win), "LibreSplit", "Could not create splits file", error->message);
+        g_error_free(error);
+        return G_SOURCE_REMOVE;
+    }
+
+    open_splits_selected(GTK_WINDOW(win), filename);
+    ls_splits_editor_open(NULL, NULL, NULL);
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Adds the JSON extension and confirms replacement of the resulting file.
+ *
+ * @param parent The main application window.
+ * @param filename The selected local path before extension normalization.
+ */
+static void new_splits_selected(GtkWindow* parent, const char* filename)
+{
+    if (is_saving() || atomic_load(&run_state) != LASR_NOT_STARTED) {
+        return;
+    }
+
+    // The file picker already checks if the file exists
+    const char* extension = strrchr(filename, '.');
+    if (extension && g_ascii_strcasecmp(extension, ".json") == 0) {
+        create_splits_file((gpointer)filename);
+        return;
+    }
+
+    // File picker should have handled all of this for us, but just in case
+    char* path = g_strconcat(filename, ".json", NULL);
+    if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+        const LSDialogOption options[] = {
+            { .label = "_Cancel", .is_cancel = TRUE, .is_default = TRUE },
+            { .label = "_Replace", .callback = create_splits_file },
+        };
+
+        const LSDialogIcon icon = {
+            .source = "dialog-warning",
+            .type = LS_DIALOG_ICON_NAME,
+        };
+
+        if (ls_dialog_open(parent, "Replace Splits File",
+                "This file already exists. Replace its contents?", path,
+                &icon, options, G_N_ELEMENTS(options), path, g_free)) {
+            return;
+        }
+    } else {
+        create_splits_file(path);
+    }
+
+    g_free(path);
+}
+
+/**
+ * @brief Chooses a new or existing splits file in the last used folder.
+ *
+ * @param app The LibreSplit application.
+ * @param create TRUE to create splits, FALSE to open existing splits.
+ */
+static void pick_splits_file(gpointer app, gboolean create)
 {
     char splits_path[PATH_MAX];
     LSAppWindow* win;
@@ -104,11 +171,11 @@ void open_activated(GSimpleAction* action,
 
     // Load the last used split folder, if present
     const char* last_split_folder = cfg.history.last_split_folder.value.s;
-    if (parameter != NULL) {
-        app = parameter;
+    win = ls_app_window_get_default(LS_APP(app));
+    if (create && (is_saving() || atomic_load(&run_state) != LASR_NOT_STARTED)) {
+        return;
     }
 
-    win = ls_app_window_get_default(LS_APP(app));
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
         return;
@@ -137,15 +204,41 @@ void open_activated(GSimpleAction* action,
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
     }
 
-    LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true } };
+    LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .suffix = "json", .is_default = true } };
     const LSFilePickerOptions options = {
-        .title = "Open Splits File",
+        .title = create ? "New Splits" : "Open Splits File",
         .path = splits_path,
         .filters = filters,
         .filters_count = G_N_ELEMENTS(filters),
+        .save = create,
+        .initial_name = create ? "Untitled.json" : NULL,
     };
 
-    ls_file_picker_open(GTK_WINDOW(win), &options, open_splits_selected);
+    ls_file_picker_open(GTK_WINDOW(win), &options, create ? new_splits_selected : open_splits_selected);
+}
+
+/**
+ * @brief Opens the file picker to load existing splits.
+ *
+ * @param action Unused action.
+ * @param parameter Usually NULL; otherwise supplies the application.
+ * @param app The LibreSplit application.
+ */
+void open_activated(GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+    pick_splits_file(parameter != NULL ? parameter : app, FALSE);
+}
+
+/**
+ * @brief Opens the file picker to create new splits.
+ *
+ * @param action Unused action.
+ * @param parameter Usually NULL; otherwise supplies the application.
+ * @param app The LibreSplit application.
+ */
+void new_activated(GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+    pick_splits_file(parameter != NULL ? parameter : app, TRUE);
 }
 
 /**
