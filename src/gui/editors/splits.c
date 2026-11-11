@@ -59,10 +59,11 @@ typedef struct {
     json_t* parent;
     size_t index;
     GtkWidget* items;
+    GtkLabel* label;
 } SettingControl;
 
 static GtkWidget* setting_control_new(const SettingDefinition* definition, json_t* parent, size_t index);
-static void setting_array_refresh(SettingControl* control);
+static void setting_array_append(SettingControl* control, size_t index);
 static void script_load(GtkEntry* entry, Editor* editor);
 
 static GtkWindow* editor_window = NULL;
@@ -1100,16 +1101,26 @@ static void setting_option_changed(GtkDropDown* dropdown, GParamSpec* spec, Sett
 }
 
 /**
- * @brief Removes one array item and refreshes the remaining controls.
+ * @brief Removes one array item and renumbers the remaining controls.
  *
- * @param button The Remove button holding the item index.
+ * @param button The removed item's button.
  * @param control The array setting to update.
  */
 static void setting_item_remove(GtkButton* button, SettingControl* control)
 {
-    guint index = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "item-index"));
-    json_array_remove(ls_splits_draft_setting_get(control->parent, control->definition->key, control->index), index);
-    setting_array_refresh(control);
+    GtkWidget* row = gtk_widget_get_parent(GTK_WIDGET(button));
+    SettingControl* item = g_object_get_data(G_OBJECT(row), "item-control");
+    json_array_remove(ls_splits_draft_setting_get(control->parent, control->definition->key, control->index), item->index);
+    gtk_box_remove(GTK_BOX(control->items), row);
+
+    size_t index = 0;
+    for (row = gtk_widget_get_first_child(control->items); row; row = gtk_widget_get_next_sibling(row)) {
+        item = g_object_get_data(G_OBJECT(row), "item-control");
+        item->index = index++;
+        char* title = g_strdup_printf("Item %zu", index);
+        gtk_label_set_text(item->label, title);
+        g_free(title);
+    }
 }
 
 /**
@@ -1120,9 +1131,9 @@ static void setting_item_remove(GtkButton* button, SettingControl* control)
  */
 static void setting_item_add(GtkButton* button, SettingControl* control)
 {
-    json_array_append_new(ls_splits_draft_setting_get(control->parent, control->definition->key, control->index),
-        ls_splits_draft_setting_default(control->definition->items));
-    setting_array_refresh(control);
+    json_t* array = ls_splits_draft_setting_get(control->parent, control->definition->key, control->index);
+    json_array_append_new(array, ls_splits_draft_setting_default(control->definition->items));
+    setting_array_append(control, json_array_size(array) - 1);
 }
 
 /**
@@ -1181,49 +1192,48 @@ static GtkWidget* settings_group_new(const char* title, GtkWidget* content, gboo
  * @param definition The setting definition.
  * @param parent The draft object or array holding the setting value.
  * @param index The array index. Ignored for objects.
+ * @return SettingControl* The control owned by the new widgets.
  */
-static void add_setting(GtkWidget* form, int row, const SettingDefinition* definition, json_t* parent, size_t index)
+static SettingControl* add_setting(GtkWidget* form, int row, const SettingDefinition* definition, json_t* parent, size_t index)
 {
     GtkWidget* field = setting_control_new(definition, parent, index);
+    SettingControl* control = g_object_get_data(G_OBJECT(field), "setting-control");
     gboolean nested = definition->type == SETTING_OBJECT || definition->type == SETTING_ARRAY;
     char* title = json_is_array(parent) ? g_strdup_printf("Item %zu", index + 1) : g_strdup(definition->name ? definition->name : definition->key);
     if (nested) {
         GtkWidget* group = settings_group_new(title, field, TRUE, definition->desc);
+        GtkExpander* expander = GTK_EXPANDER(gtk_frame_get_child(GTK_FRAME(group)));
+        control->label = GTK_LABEL(gtk_expander_get_label_widget(expander));
         gtk_grid_attach(GTK_GRID(form), group, 0, row, 2, 1);
     } else {
         GtkWidget* label = add_field(form, row, title, field);
+        control->label = GTK_LABEL(label);
         gtk_label_set_max_width_chars(GTK_LABEL(label), 22);
         gtk_label_set_wrap_mode(GTK_LABEL(label), PANGO_WRAP_WORD_CHAR);
         gtk_widget_set_valign(field, GTK_ALIGN_START);
     }
 
     g_free(title);
+    return control;
 }
 
 /**
- * @brief Displays the array's current items with individual remove buttons.
+ * @brief Appends one array item's controls and remove button.
  *
- * @param control The array setting whose item controls should be rebuilt.
+ * @param control The array setting receiving the controls.
+ * @param index The new item's array index.
  */
-static void setting_array_refresh(SettingControl* control)
+static void setting_array_append(SettingControl* control, size_t index)
 {
-    GtkWidget* child;
-    while ((child = gtk_widget_get_first_child(control->items))) {
-        gtk_box_remove(GTK_BOX(control->items), child);
-    }
-
     json_t* array = ls_splits_draft_setting_get(control->parent, control->definition->key, control->index);
-    for (size_t i = 0; i < json_array_size(array); ++i) {
-        GtkWidget* row = form_new();
-        const SettingDefinition* item = control->definition->items;
-        add_setting(row, 0, item, array, i);
-        GtkWidget* remove = remove_button_new("Remove item", TRUE);
-        gtk_widget_set_valign(remove, GTK_ALIGN_START);
-        g_object_set_data(G_OBJECT(remove), "item-index", GUINT_TO_POINTER(i));
-        g_signal_connect(remove, "clicked", G_CALLBACK(setting_item_remove), control);
-        gtk_grid_attach(GTK_GRID(row), remove, 2, 0, 1, 1);
-        gtk_box_append(GTK_BOX(control->items), row);
-    }
+    GtkWidget* row = form_new();
+    SettingControl* item = add_setting(row, 0, control->definition->items, array, index);
+    g_object_set_data(G_OBJECT(row), "item-control", item);
+    GtkWidget* remove = remove_button_new("Remove item", TRUE);
+    gtk_widget_set_valign(remove, GTK_ALIGN_START);
+    g_signal_connect(remove, "clicked", G_CALLBACK(setting_item_remove), control);
+    gtk_grid_attach(GTK_GRID(row), remove, 2, 0, 1, 1);
+    gtk_box_append(GTK_BOX(control->items), row);
 }
 
 /**
@@ -1299,7 +1309,10 @@ static GtkWidget* setting_control_new(const SettingDefinition* definition, json_
             {
                 control->items = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
                 gtk_box_append(GTK_BOX(content), control->items);
-                setting_array_refresh(control);
+                for (size_t i = 0; i < json_array_size(value); ++i) {
+                    setting_array_append(control, i);
+                }
+
                 field = gtk_button_new_with_label("Add Item");
                 gtk_widget_set_halign(field, GTK_ALIGN_START);
                 g_signal_connect(field, "clicked", G_CALLBACK(setting_item_add), control);
